@@ -6,3 +6,4 @@ Estuary Developer Documentation
    :caption: Overview
 
    Introduction <index>
+   Example: Market Data <example-market>

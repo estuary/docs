@@ -386,7 +386,7 @@ windowing, joins, and other complex event processing patterns.
 
 Estuary is a distributed system and transformations are often run by many
 parallel "runners". Pure functions -- having no state -- are easy to scale
-up and down, and Estaury automatically manages their parallelism.
+up and down, and Estuary automatically manages their parallelism.
 
 Closures also run in parallel, but the output of a closure may depend on the
 current record as well as *all previous input records* of the closure. For
