@@ -2,11 +2,10 @@
 Introduction
 =============
 
-Estuary powers 
+Estuary makes it easy to capture, catalog, transform, and activate data sets in real-time,
+all without writing code.
 
-
-deploy real time pipelines and backends that handle adding schema, transformations and aggregations solely by writing SQL, jq and JSON Schema.  
-
+*FILL ME OUT - talk about high level use cases ?*
 
 Concepts
 =========
@@ -16,21 +15,24 @@ Collections
 
 An Estuary **Collection** is an append-only set of immutable *records*. Records are
 JSON documents, and each must be valid to the collection's associated JSON-Schema_.
-Schemas may impose no structure, may be rigourously specified, or fall anywhere in
+Schemas may impose no structure, may be rigorously specified, or fall anywhere in
 between. They may also evolve over time, though not in such a way that they
 invalidate records already part of the collection.
 
 **Collections are optimized for stream processing**.
 
-   Many publishers can concurrently append new records at high volumes.
+   Collections support ongoing appends of new records at high volumes.
    The current readers of a collection are notified of new records within milliseconds.
 
 **Historical records are regular files in cloud storage (S3)**.
 
-   Collections organize, index, and store records within a Hive-compatible file hierarchy
-   implemented using only cloud storage. Files themselves hold record content (eg, JSON lines)
-   with no special formatting, and can be directly read using preferrred tools and
-   workflows -- including Map/Reduce, Spark, Snowflake, and BigQuery.
+   Collections organize, index, and store records within a file hierarchy
+   implemented using only cloud storage. Data rests exclusively within
+   buckets you own.
+
+   Files themselves hold record content (eg, JSON lines) with no special
+   formatting, and can be directly read using preferred tools and work flows --
+   including Map/Reduce, Spark, Snowflake, and BigQuery.
 
 **Collections are a long-term source of truth**.
 
@@ -40,13 +42,13 @@ invalidate records already part of the collection.
 **A collection is either *prime* or *derived***.
 
    A *prime* collection is one into which records are directly written.
-   Estuary provides a ingestion APIs for adding events to prime collections.
+   Estuary provides ingestion APIs for adding events to prime collections.
    An API service might publish events from live serving via HTTP PUTs,
-   or an AWS lambda might stream in Kenisis events.
+   or an AWS lambda might stream in Kinesis events.
 
-   *Derived* collections are declared in terms of source collections and
-   transformations to apply, and are akin to a materialized view in a database--
-   a view which is continously updated as source collections change.
+   *Derived* collections are akin to a materialized view in a database.
+   They're declared in terms of source collections and transformations to apply,
+   and continuously update as the source collections change.
 
 **They may be explicitly and/or automatically partitioned**.
  
@@ -61,6 +63,9 @@ invalidate records already part of the collection.
    Hive-compatible layout, making them interpretable as external tables by tools
    that understand Hive partitioning and predicate push-down (eg, Snowflake,
    BigQuery, and Hive itself).
+
+   Estuary generates suitable external table definitions which can be plugged
+   into many popular SQL analysis tools.
 
 **They may declare a *primary key***.
 
@@ -79,7 +84,7 @@ JSON-Schema
 ************
 
 JSON-Schema_ is a draft standard for describing the expected structure and semantics
-of JSON documents. Schemas are composable and flexibile, and may include conditionals
+of JSON documents. Schemas are compose-able and reusable, and may include conditionals
 and dependencies that make it possible to represent `tagged unions`_ and other complex,
 real-world composite types.
 
@@ -114,7 +119,7 @@ records and indexing the present value for each key.
 Using a collection might seem rather round-about for a simple a key/value map--why not just
 use DynamoDB or Memcached directly, and call it a day?--but its advantage becomes clear
 as soon as one wants *both* DynamoDB and Memcached, or indexes in multiple clouds or regions,
-or wants to study how keys have changed over time. A collection can be read over and over
+or one wants to study how keys have changed over time. A collection can be read over and over
 again, now or in the future, without any coordination or operational risk to production
 infrastructure, and every reader will materialize the *exact same state*.
 
@@ -130,12 +135,13 @@ in the target system.
 Collections without a key are loaded one-for-one into the target system. It gets more
 interesting when materializing a collection that's declared with a primary key:
 
-- Records of the collection are interpreted as modelng a mutable state of the key.
+- Records of the collection are interpreted as modeling a mutable state of the key.
   For example, a key might compose dimensions of a fact table, or be a user name,
   or a blog post ID.
 
   When materializing into a database or index, collection records are *mapped* to
   corresponding relation rows or key/value entries by the record key.
+
 
 - Records also have a well-defined *reduction* operation for producing updated states.
   We've discussed one example already--map updates are reduced by taking the last value
@@ -146,7 +152,7 @@ interesting when materializing a collection that's declared with a primary key:
   When materializing, the current mapped value is *read* and is then *modified* by
   reducing new records into its present value.
 
-Materializations are very efficient, even when materializating a high-volume collection.
+Materializations are very efficient, even when materializing a high-volume collection.
 The load imposed on a target system is proportional to the rate by which the
 materialization itself changes, and **not** to the underlying record rate of the
 collection. A tiny PostgreSQL database can easily support a summary--in real time--
@@ -159,7 +165,7 @@ itself easily fits within the database.
    (formally, `a.(b.c) = (a.b).c`).
    
    Estuary leverages this property to significantly reduce record volumes early on
-   within processing pipelines -- intutively, in a similar way to how Map/Reduce
+   within processing pipelines -- intuitively, in a similar way to how Map/Reduce
    leverages Combiners. This practice lets Estuary easily handle collections
    with Zipfian_ primary key distributions.
 
@@ -235,7 +241,7 @@ into another document. A variety of reduction strategies are supported:
    Take the larger value, based on numeric or lexicographic comparision.
 
    A relative JSON-Pointer_ may optionally be provided which locates the
-   sub-field of the current JSON value which is to be compared. If ommitted,
+   sub-field of the current JSON value which is to be compared. If omitted,
    the JSON value at the annotation location is compared.
 
    Applies to ``numeric``, ``integer``, and ``string`` types, or to
@@ -250,10 +256,15 @@ into another document. A variety of reduction strategies are supported:
          "output": 20,
       }
       {
-         "schema": { "reduce": { "strategy": "minimize", "ptr": "/val" } },
-         "reduce": { "val":  "10", "other": "data" },
+         "schema": {
+            "reduce": {
+               "strategy": "minimize",
+               "field":    "/val"
+            }
+         },
+         "reduce": { "val":  "10", "one": 2 },
          "into":   { "val":  "20", "three": 4 },
-         "output": { "val":  "10", "other": "data" }
+         "output": { "val":  "10", "one": 2 }
       }
 
 :``add``/``multiply``:
@@ -286,9 +297,15 @@ into another document. A variety of reduction strategies are supported:
 
       {
          "schema": { "reduce": "hyperLogLog" },
-         "reduce": { "value": "my-item" },
+         "reduce": { "fold": "my-item" },
          "into":   { "hll": "... serialized HLL ..." },
          "output": { "hll": "... updated serialized HLL ..." }
+      }
+      {
+         "schema": { "reduce": "hyperLogLog" },
+         "reduce": { "hll": "... serialized HLL ..." },
+         "into":   { "hll": "... other HLL ..." },
+         "output": { "hll": "... merged HLL ..." }
       }
 
 :``tDigest``:
@@ -301,9 +318,15 @@ into another document. A variety of reduction strategies are supported:
 
       {
          "schema": { "reduce": "tDigest" },
-         "reduce": { "value": 150.372 },
+         "reduce": { "fold": 150.372 },
          "into":   { "td": "... serialized T-Digest ..." },
          "output": { "td": "... updated serialized T-Digest ..." }
+      }
+      {
+         "schema": { "reduce": "tDigest" },
+         "reduce": { "td": "... serialized T-Digest ..." },
+         "into":   { "td": "... other T-Digest ..." },
+         "output": { "td": "... merged T-Digest ..." }
       }
 
 .. note::
@@ -315,120 +338,152 @@ into another document. A variety of reduction strategies are supported:
     HLL's, etc.
 
 
+Reduce annotations can be composed and nested to build powerful, reusable
+aggregation behaviors. Annotations over ``object`` and ``array`` types also
+support an optional eviction policy which constrains these types to a bounded
+number of child values, with selection criteria. For example, the following
+schema annotates a reduction for weighted random `Reservoir sampling`_:
+
+.. code-block:: json
+
+   {
+      "type": "array",
+
+      "additionalItems": {
+         "properties": {
+            "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+            "sample": { "type": "string" }
+          }
+      },
+
+      "reduce": {
+         "strategy": "append",
+
+         "evictAfter": {
+            "maxValues": 100,
+            "having": "minimum",
+            "field":  "/weight"
+         }
+      }
+   }
+
+.. _`Reservoir sampling`: https://en.wikipedia.org/wiki/Reservoir_sampling#Weighted_random_sampling
+
+
 Transformations
 ****************
 
-A derived collection is declared by pairing one or more *source* collections
+A derived collection is created by pairing one or more *source* collections
 with *transformation functions*. Transformations are invoked with input
-records of the source collection schema, and must output records of the derived
-collection. Generally transformations fall into two camps: "pure" functions,
-which produce output records that depend only on the current input record,
-and closure_ functions, which maintain an internal state which is read and
-updated as input records are encountered.
+records of the source collection, and output records of the derived
+collection schema.
 
-Estuary is a distributed system, and transformations are often run by many
-parallel "runners". Pure functions are easy to scale up and down, and Estaury
-automatically manages their parallelism.
+Transformations fall into two camps: "pure" functions which produce
+output records that depend only on the current input record, and closure_
+functions which maintain an internal state that may be read and updated
+during invocations. Closures can be used to implement change detection,
+windowing, joins, and other complex event processing patterns.
+
+Estuary is a distributed system and transformations are often run by many
+parallel "runners". Pure functions -- having no state -- are easy to scale
+up and down, and Estaury automatically manages their parallelism.
 
 Closures also run in parallel, but the output of a closure may depend on the
-current record as well as *all previous* input records of the closure. For
-this reason closures must declare a fixed number of "shards", which are each
-independent instances of the closure's inner state.
+current record as well as *all previous input records* of the closure. For
+this reason closures must declare a fixed number of runners, each of which
+owns an independent instance of the closure's inner state.
 
-The number of shards
-upper-bounds the maximum parallelism of the closure. However, too many shards
-increases coordination and can slow things down.
+For each source collection a "group-by" key may also be specified, which
+is used to map each input to a designated runner prior to invocation.
+Group-bys are particularly useful for closures: they guarantee that all
+instances of a group-by key are observed by the same closure runner.
 
+.. note::
 
+   - If no group-by is declared but the source collection has a primary key,
+     the primary key is implicitly the group-by.
+   - Source collections having neither a group-by nor primary key distribute
+     records arbitrarily across runners.
+   - Closure transforms *must* use a group-by (this is almost certainly what
+     you want, anyway).
 
+When processing a source collection with a group-by, input records may be
+partially reduced on the group-by key *prior* to invoking the transform. Put
+differently, transforms are invoked with inputs that *reflect* all source
+collection records but may not necessarily be 1:1 with them. If no group-by
+is applied, no reduction is done and the transform is called with every source
+record.
 
-desired partitioning, which 
+While a bit odd, this pre-invocation reduction of input records allows Estuary
+to ensure excellent performance and solves for a host of issues that commonly
+plague complex event processing pipelines (eg, hot-spotting of runners due to
+Zipfian_ key distributions). It also means that scaling a source collection's
+record rate *doesn't* require a commensurate increase in the number of closure
+runners. Runners need only scale to the desired processing rate of input records
+*after* grouping.
 
+At the other end, if the derived collection has a primary key then *output*
+records of a transform are generally reduced on that key prior to being
+added to the collection. An implication is that it's actually quite efficient
+to use pure transforms that simply *project* input records into a desired output
+shape, and to then rely on automatic reductions to dramatically lower the
+effective output record rate.
 
-must be fixed and determined ahead of
-time
-
-
-
-Closures may also be senstive to the keys
-by which inputs
-
-
-
-
-
-Several ways of specifying transformation functions are supported.
-Many transformations are "pure" functions, which means that an output
-depends only on its current input record.
-
-Estuary also provides closure_ transformations which "close" over an
-internal and local state. Closures can be used to implement change
-detection, windowing, joins, and other complex event processing patterns.
+Several means of specifying transformation functions are supported:
 
 :jq_ filters:
 
-   "jq" is a swiss army knife for working with JSON documents.
-   Use jq filters to transform, filter, and project JSON documents from
-   one schema into another.
+   "jq" is a swiss army knife for working with JSON documents. Use jq filters to
+   transform, filter, and project JSON documents from one schema into another.
 
-:SQLite pure function:
+   jq filters are always "pure" transforms, and run with arbitrary parallelism.
+
+:HTTP Endpoint:
+
+   The function must accept one or more input records via HTTP PUT, and respond
+   with one or more output records. HTTP endpoints are a good fit for AWS Lambdas
+   or Google Cloud Run functions, and provide an "escape hatch" for implementing
+   custom logic or joining records with external tables or indexes.
+
+:Stateful SQLite DB:
 
    Specify transformations in terms of one or more SQL statements which read
-   records from a provided ``input`` table and write to provided ``output`` table
-   (table definitions are derived from the respective JSON-Schema_).
+   records from a provided ``input`` table and write to a provided ``output`` table.
+   Table definitions are derived from the respective collection JSON-Schema_.
 
-   Pure SQLite functions run within SQLite ":memory:" databases, with arbitrary
-   parallelism. Database may come & go at any time. Functions are given an
-   opportunity to "bootstrap" their database at startup, and nothing stops
+   Transforms may bootstrap and use one or more internal state tables,
+   which are guaranteed to be durable to machine and even availability zone
+   failures.
 
-  
-   but no reliance should be made on
-   the durability of internal table rows written by the program. 
- 
-:SQLite closures:
+   They must pre-declare the number of runners to employ, but are then assured
+   that the mapping of group-by keys to runners is stable.
 
-   SQLite closures resemble SQLite functions, but close_ over a local
-   state expressed as one or more associated tables.
+   Transforms may leverage the full capability set of SQLite, including extensions
+   for geo-spatial processing, full-text search, working with JSON, and more.
 
-   
+:Temporary SQLite DB:
 
+   Temporary DBs are appropriate when implementing a "pure" transformation in
+   terms of SQLite statements. They are easily scaled and have less overhead
+   as compared to their stateful peers.
 
+   They operate like stateful DBs, but are fundamentally ephemeral and provide
+   no durability guarantees with respect to any internal tables which may be
+   populated. As a general rule, transforms *should not* rely on internal tables
+   of temporary DBs.
 
+   That said there are **advanced** use cases which can benefit from use of
+   temporary tables, such as caching of expensive computations or implementing
+   lossy joins. When opting into this feature, be aware that:
 
-.. _closure: https://en.wikipedia.org/wiki/Closure_(computer_programming)
+   - Internal stable states may disappear at any time.
+   - The mapping of group-by key <-> runner DB is unstable,
+     and will change as runners are scaled up or down.
 
-
-:Remote HTTP Endpoint:
-
-   Use an AWS lambda as a transformation. The function must accept one or more
-   input records via HTTP PUT, and respond with one or more output records.
-
-
-
-Lambdas must produce records which conform to the derived collection JSON-Schema_.
+Transforms must produce records which conform to the derived collection JSON-Schema_.
 If they don't, an error will be raised and the derived collection will cease to
-update until either the schema or function are corrected.
-
-
-
-If a derived collection is specified with a primary key, Estuary will efficiently
-reduce instances of the output schema produced by transformations. This means that
-powerful and efficient aggregations can be instrumented by simply *projecting*
-each source record into the corresponding output shape.
-
+update until either the schema or transform are corrected.
 
 .. _jq: https://stedolan.github.io/jq/
-
-
-
-
-
-
-
-Optionally, records of source collections
-are re-grouped using a *group-by* key, which may differ from the source's primary
-key (or the source may have no primary key).
-
-
-
+.. _closure: https://en.wikipedia.org/wiki/Closure_(computer_programming)
 
