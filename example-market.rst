@@ -23,7 +23,7 @@ Each document of the stream represents a stock transaction that has occurred (``
 as well as the current best offers to sell (``ask``) or buy (``bid``) the security.
 
 We can use vanilla JSON-Schema_ to model these documents, with sub-schemas broken out
-for composition and later re-use:
+for composition and future re-use:
 
 .. code-block:: json
 
@@ -139,8 +139,7 @@ We've broken out the ``priceStats`` schema for re-use within the ``securityStats
 average (where the average numerator and denominator are reduced individually).
 
 ``securityStats`` then bundles a number of statistics of interest, along with the security,
-exchange, and date (*not* the date-time). To set things in motion, we now need to declare a
-derived collection:
+exchange, and date. To set things in motion, we now need to declare a derived collection:
 
 .. code-block:: yaml
 
@@ -154,7 +153,7 @@ derived collection:
               {
                 exchange: .exchange,
                 security: .security,
-                # Date is produced by truncating from eg "2020-01-16T12:34:56Z" => "2020-01-16".
+                # Date is produced by truncating from "2020-01-16T12:34:56Z" => "2020-01-16".
                 date:   .time | fromdate | strftime("%Y-%m-%d"),
                 # Price stat uses a by-volume weighted average of trades.
                 price:  {min: .last.price, max: .last.price, avgN: (.last.price * .last.size), avgD: .last.size},
@@ -177,14 +176,33 @@ specified a ``groupBy`` clause, and the "ticks" collection itself doesn't have a
 key, which means that our jq filter will be invoked with every input record of "ticks".
 
 The job of our filter is to *project* each tick record into the correct ``securityStats``
-shape. In other words, it's answering the question "if we saw one (and only one) tick of
+shape. In other words, it's answering the question "If I see one (and only one) tick of
 this security today, what should its entry in ``securityStats`` look like?".
 
-And... that's it. Our "stats" collection is now running and will continuously update
-itself from "ticks". We don't have to worry about scaling. Our jq filter is a pure
-function, and uses a dynamic number of runners managed by Estuary. Automatic partitions
-are created on an as-needed basis to support the rate of records in both "ticks" and
-"stats".
+And... that's it. Having defined what stats look like for a *single* tick, we can rely
+on our reduce annotations to correctly update statistics when there are *lots* of ticks.
+
+Our "stats" collection is off and running, and will continuously update itself from
+"ticks". We don't have to worry about scaling. Our jq filter is a "pure" function,
+and is dynamically scaled up and down as needed. Should the "ticks" or "stats"
+collection have a sufficiently high volume of records, it will automatically be
+partitioned as needed.
+
+.. tip::
+
+    A ``where`` clause can also be applied to a source collection to restrict the set
+    of partitions to read. This is useful when the source collection is a tagged union
+    partitioned on the type tag, as ``where`` provides a zero-cost means of filtering
+    to desired event types.
+
+    In this example, we might also use ``where`` to build independent stats tables for
+    each market exchange:
+
+    .. code-block:: yaml
+
+      derive:
+        - fromCollection: name/of/collection/ticks
+          where: "exchange = NYSE"
 
 
 Materializing to PostgreSQL

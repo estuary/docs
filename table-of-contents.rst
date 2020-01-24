@@ -7,3 +7,4 @@ Estuary Developer Documentation
 
    Introduction <index>
    Example: Market Data <example-market>
+   Example: Wiki Attributes <example-wiki>
