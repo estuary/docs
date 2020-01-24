@@ -2,10 +2,21 @@
 Introduction
 =============
 
-Estuary makes it easy to capture, catalog, transform, and activate data sets in real-time,
-all without writing code.
+Estuary empowers your *data operations* -- all of the systems and services you
+use to process, index, and analyze data -- around a common source of truth,
+in real-time, with database-like simplicity.
 
-*FILL ME OUT - talk about high level use cases ?*
+- **Capture** streaming data sets into long-lived "Collections" backed by cloud storage.
+- **Catalog** collections for discovery, re-use, and analysis using familiar tools.
+- **Derive** new collections which transform, enrich, and report over events.
+- **Materialize** collections into databases and SaaS services for analysis and activation.
+
+Build collections and express complex event flows and transformations using
+standard tools like JSON-Schema_, SQL, and jq_ filters -- no coding required.
+Use Estuary to capture application logs and enrich them into data lakes. Then
+materialize log summaries as real-time pivot tables within your PostgreSQL
+database. Or, build comprehensive user profiles in BigTable or Dynamo which
+continuously derive themselves from a live stream of user interactions.
 
 Concepts
 =========
@@ -21,14 +32,14 @@ invalidate records already part of the collection.
 
 **Collections are optimized for stream processing**.
 
-   Collections support ongoing appends of new records at high volumes.
-   The current readers of a collection are notified of new records within milliseconds.
+   Collections ingest records with low latency, even when scaling to massive
+   record volumes (millions of QPS). The current readers of a collection are
+   notified of new records within milliseconds.
 
-**Historical records are regular files in cloud storage (S3)**.
+**Collections are also Data Lakes**.
 
-   Collections organize, index, and store records within a file hierarchy
-   implemented using only cloud storage. Data rests exclusively within
-   buckets you own.
+   Collections organize, index, and store records within a hierarchy of files
+   implemented atop cloud storage. Data rests exclusively within buckets you own.
 
    Files themselves hold record content (eg, JSON lines) with no special
    formatting, and can be directly read using preferred tools and work flows --
@@ -36,13 +47,16 @@ invalidate records already part of the collection.
 
 **Collections are a long-term source of truth**.
 
-   New readers efficiently "backfill" over all existing records of the collection,
-   then seamlessly transition to tailing newly-added records in real-time.
+   Apply retention policies driven by your organizational requirements –
+   not your available disk space.
 
-**A collection is either *prime* or *derived***.
+   A new derivation or materialization seamlessly back-fills over all
+   collection records, even where they span months or even years of data.
 
-   A *prime* collection is one into which records are directly written.
-   Estuary provides ingestion APIs for adding events to prime collections.
+**A collection is either captured or derived**.
+
+   A *captured* collection is one into which records are directly written.
+   Estuary provides ingestion APIs for adding events to captured collections.
    An API service might publish events from live serving via HTTP PUTs,
    or an AWS lambda might stream in Kinesis events.
 
@@ -67,7 +81,7 @@ invalidate records already part of the collection.
    Estuary generates suitable external table definitions which can be plugged
    into many popular SQL analysis tools.
 
-**They may declare a *primary key***.
+**They may declare a primary key**.
 
    Primary keys may be scalar or composite keys and are specified via JSON-Pointer_,
    where pointers denote the location of the key's field within record documents.
@@ -90,7 +104,7 @@ real-world composite types.
 
 The standard also formalizes a concept of "Annotations_" through which schemas can
 conditionally attach metadata within a validated JSON document. For example, a schema
-validating a union type might attach `description` annotations to certain fields
+validating a union type might attach ``description`` annotations to certain fields
 depending on the document's matched union variant -- descriptions which are later
 used to power tool-tips appearing within a UI.
 
@@ -124,8 +138,8 @@ again, now or in the future, without any coordination or operational risk to pro
 infrastructure, and every reader will materialize the *exact same state*.
 
 
-Materializations
-*****************
+Materialization
+****************
 
 Estuary does much of the heavy lifting when materializing states from collections, and can
 automatically load collections into a number of common database, indexes, and SaaS tools.
@@ -135,15 +149,14 @@ in the target system.
 Collections without a key are loaded one-for-one into the target system. It gets more
 interesting when materializing a collection that's declared with a primary key:
 
-- Records of the collection are interpreted as modeling a mutable state of the key.
+* Records of the collection are interpreted as modeling a mutable state of the key.
   For example, a key might compose dimensions of a fact table, or be a user name,
   or a blog post ID.
 
   When materializing into a database or index, collection records are *mapped* to
   corresponding relation rows or key/value entries by the record key.
 
-
-- Records also have a well-defined *reduction* operation for producing updated states.
+* Records also have a well-defined *reduction* operation for producing updated states.
   We've discussed one example already--map updates are reduced by taking the last value
   written for a given key--but much more sophisticated reductions can be expressed.
   Reductions might update metrics of a fact table, or accumulate friend connections
@@ -152,7 +165,7 @@ interesting when materializing a collection that's declared with a primary key:
   When materializing, the current mapped value is *read* and is then *modified* by
   reducing new records into its present value.
 
-Materializations are very efficient, even when materializing a high-volume collection.
+Materialization is very efficient, even when materializing a high-volume collection.
 The load imposed on a target system is proportional to the rate by which the
 materialization itself changes, and **not** to the underlying record rate of the
 collection. A tiny PostgreSQL database can easily support a summary--in real time--
@@ -165,9 +178,9 @@ itself easily fits within the database.
    (formally, `a.(b.c) = (a.b).c`).
    
    Estuary leverages this property to significantly reduce record volumes early on
-   within processing pipelines -- intuitively, in a similar way to how Map/Reduce
-   leverages Combiners. This practice lets Estuary easily handle collections
-   with Zipfian_ primary key distributions.
+   during processing -- intuitively, in a similar way to how Map/Reduce leverages
+   Combiners. This practice lets Estuary easily handle collections with Zipfian_
+   primary key distributions.
 
 .. _Zipfian: https://en.wikipedia.org/wiki/Zipf%27s_law
 
@@ -179,7 +192,7 @@ Estuary extends the JSON-Schema_ vocabulary with an additional ``reduce`` keywor
 which annotates how locations within a validated JSON document may be reduced
 into another document. A variety of reduction strategies are supported:
 
-:``lastWriteWins``: 
+:``lastWriteWins``/``firstWriteWins``:
    Reduce by taking the value of the more recently written document.
    If a ``reduce`` annotation is not specified at a document location,
    ``lastWriteWins`` is the assumed default behavior.
@@ -193,6 +206,12 @@ into another document. A variety of reduction strategies are supported:
          "reduce": "foobar",
          "into":   123,
          "output": "foobar"
+      }
+      {
+         "schema": { "reduce": "firstWriteWins" },
+         "reduce": "foobar",
+         "into":   123,
+         "output": 123
       }
 
 :``merge``:

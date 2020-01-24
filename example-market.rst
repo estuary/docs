@@ -90,8 +90,8 @@ which will allow us to efficiently select subsets of collection records:
     Given these partitions, we expect to see collection files in cloud storage with prefixes like:
     ``s3://my-bucket/name/of/collection/ticks/exchange=NYSE/part=001/insertDate=2019-01-16/``.
 
-This is a *prime* collection, meaning that records are directly written into it. Estuary
-provides an API which accepts authenticated HTTP PUTs of one or more records at
+This is a *captured* collection, meaning that records are directly written into it.
+Estuary provides an API which accepts authenticated HTTP PUTs of one or more records at
 ``https://estuary.dev/api/name/of/collection/ticks``.
 
 
