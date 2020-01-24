@@ -2,9 +2,9 @@
 Introduction
 =============
 
-Estuary empowers your *data operations* -- all of the systems and services you
-use to process, index, and analyze data -- around a common source of truth,
-in real-time, with database-like simplicity.
+Estuary enables your *data operations* -- wiring data flows through the systems
+and services you use to store, process, index, and analyze data -- around a
+shared source of truth, processed in real-time, with database-like simplicity.
 
 - **Capture** streaming data sets into long-lived "Collections" backed by cloud storage.
 - **Catalog** collections for discovery, re-use, and analysis using familiar tools.
@@ -65,21 +65,17 @@ invalidate records already part of the collection.
    and continuously update as the source collections change.
 
 **They may be explicitly and/or automatically partitioned**.
- 
-   An explicit partition segregates records of a collection based on a record value
-   specified via JSON-Pointer_. For example, a collection of market updates might
-   partition on the market exchange (``NYSE``, ``NASDAQ``, etc).
 
-   Automatic partitions are managed by Estuary, and allow collections to scale up to
-   arbitrary record volumes. 
+   Records are segregated by partition and are organized within cloud storage using
+   a Hive-compatible layout. Partitioned collections are directly interpretable as
+   external tables by tools that understand Hive partitioning and predicate
+   push-down -- like Snowflake, BigQuery, and Hive itself. Estuary generates suitable
+   external table definitions which can be plugged into these tools.
 
-   Files of partitioned collections are organized within cloud storage using a
-   Hive-compatible layout, making them interpretable as external tables by tools
-   that understand Hive partitioning and predicate push-down (eg, Snowflake,
-   BigQuery, and Hive itself).
-
-   Estuary generates suitable external table definitions which can be plugged
-   into many popular SQL analysis tools.
+   Explicit partitions derive field values from records themselves, using
+   JSON-Pointer_. A collection of stock market records might partition on the
+   market exchange (``NYSE``, ``NASDAQ``, etc). Automatic partitions are managed
+   by Estuary, and allow collections to scale up to arbitrary record volumes.
 
 **They may declare a primary key**.
 

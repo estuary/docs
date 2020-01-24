@@ -14,9 +14,9 @@ roughly matching what's known as `Level 1 Market Data`_:
         "exchange": "NYSE",
         "security": "APPL",
         "time": "2019-01-16T12:34:56Z",
-        "bid":  {"price": 315.79, "size": 100},
-        "ask":  {"price": 317.45, "size": 200},
-        "last": {"price": 316.28, "size": 50}
+        "bid":  {"price": 321.09, "size": 100},
+        "ask":  {"price": 321.45, "size": 200},
+        "last": {"price": 321.12, "size": 50}
     }
 
 Each document of the stream represents a stock transaction that has occurred (``last``),
@@ -99,8 +99,109 @@ Deriving Daily Stats
 *********************
 
 Suppose we want a view over daily statistics of securities: first and last transactions,
-volume, average transaction price, bid, ask, spread, etc. Let's first define some JSON-Schema_.
-We'll also use the ``reduce`` keyword annotation to describe how to reduce documents of our schema:
+volume, average transaction price, bid, ask, spread, etc. Let's begin with an example of
+what our desired statistics record might look like:
+
+.. code-block:: json
+
+    {
+      "exchange": "NYSE",
+      "security": "APPL",
+      "date": "2019-01-16",
+      "price":  { "low": 319.31, "high": 323.33, "avgN": 7294940268.32, "avgD": 22655094 },
+      "bid":    { "low": 319.27, "high": 323.27, "avgN":   24258004.35, "avgD": 75516 },
+      "ask":    { "low": 319.45, "high": 323.39, "avgN":   24276883.89, "avgD": 75516 },
+      "spread": { "low":   0.25, "high":   0.42, "avgN":      27940.92, "avgD": 75516 },
+      "volume": 22655094,
+      "first":  { "price": 319.97, "size": 150 },
+      "last":   { "price": 323.09, "size": 200 }
+    }
+
+This record presents low and high water marks for trace prices, bids, asks, and spreads
+over the course of a date, as well as averages which are broken out into separate numerator
+and denominator components (eg, spread average is 27940/75516 = $0.37). It also tracks the
+first and last trade of the day, as well as the total share volume. ``price`` is the average
+trade price weighted by the number of transacted shares, while ``bid/ask/spread`` are
+averaged over the total number of trade ticks observed (75,516).
+
+We'll build this record via reduction, by answering two questions:
+
+1) If we had exactly one record in "ticks", what would it's daily statistics record look like?
+2) If we have two statistics records for the same date & security, how do we combine them?
+
+Let's begin to answer 1) with an example. A "ticks" record, repeated from before:
+
+.. code-block:: json
+
+    {
+        "exchange": "NYSE",
+        "security": "APPL",
+        "time": "2019-01-16T12:34:56Z",
+        "bid":  {"price": 321.09, "size": 100},
+        "ask":  {"price": 321.45, "size": 200},
+        "last": {"price": 321.12, "size": 50}
+    }
+
+And it's corresponding statistics record:
+
+.. code-block:: json
+    :name:
+
+    {
+      "exchange": "NYSE",
+      "security": "APPL",
+      "date": "2019-01-16",
+      "price":  { "low": 321.12, "high": 321.12, "avgN":  16056, "avgD": 50 },
+      "bid":    { "low": 321.09, "high": 321.09, "avgN": 321.09, "avgD": 1 },
+      "ask":    { "low": 321.45, "high": 321.45, "avgN": 321.45, "avgD": 1 },
+      "spread": { "low":   0.36, "high":   0.36, "avgN":   0.36, "avgD": 1 },
+      "volume": 50,
+      "first":  { "price": 321.12, "size": 50 },
+      "last":   { "price": 321.12, "size": 50 }
+    }
+
+If we see just this trade tick today, then the low, high, and average price statistics
+will of course just be the present values from our tick record. Our last trade was
+50 shares, so we'll weight the average price by that, and other average statistics are
+weighted by 1 because we've seen just one tick. Our spread is simply the current ask
+minus bid, and by definition a single tick is also the first and last trade of the day.
+
+Grounding things out, here's a simple jq_ filter that *projects* a single tick record into
+a corresponding statistics record, which produced the example above. This is an example of
+a "pure" function, as it's output depends only on the current input tick:
+
+.. code-block:: none
+
+    {
+      exchange: .exchange,
+      security: .security,
+      # Date is produced by truncating from "2020-01-16T12:34:56Z" => "2020-01-16".
+      date:   .time | fromdate | strftime("%Y-%m-%d"),
+      # Price stat uses a by-volume weighted average of trades.
+      price:  {low: .last.price, high: .last.price, avgN: (.last.price * .last.size), avgD: .last.size},
+      # Bid, ask, and spread stats use equal weighting of observed prices across ticks.
+      bid:    {low: .bid.price,  high: .bid.price,  avgN: .bid.price, avgD: 1},
+      ask:    {low: .ask.price,  high: .ask.price,  avgN: .ask.price, avgD: 1},
+      spread: ((.ask.price - .bid.price) as $s | {low: $s, high: $s, avgN: $s, avgD: 1}),
+      volume: .last.size,
+      first:  .last,
+      last:   .last,
+    }
+
+The next question is, given two such records, how do we combine them? Hopefully this is
+now intuitive: given two records, we'll use the minimum of their ``low`` fields, the
+maximum of ``high``, and the ``avgN/avgD/volume`` fields can be summed to reflect the
+total volume and weighted averages of both records. Assume we know which record
+came first, and we'll pick ``first`` and ``last`` trade fields appropriately. Having
+figured this out, we can now repeat this operation regardless of whether we have two
+records to reduce, or two billion.
+
+Within Estuary, reductions happen automatically. We merely need to *explain* how
+reduction can be accomplished for our collection record types, and the platform will
+apply the operation on our behalf (and at every opportunity). The way we do this is
+through ``reduce`` keyword annotations which accompany our JSON-Schema_ definitions.
+Here's a schema for our statistics record with ``reduce`` annotations that implement
+the rules we previously worked through:
 
 .. code-block:: json
 
@@ -109,8 +210,8 @@ We'll also use the ``reduce`` keyword annotation to describe how to reduce docum
         "priceStats": {
           "type": "object",
           "properties": {
-            "min":  { "type": "number",  "reduce": "minimize" },
-            "max":  { "type": "number",  "reduce": "maximize" },
+            "low":  { "type": "number",  "reduce": "minimize" },
+            "high": { "type": "number",  "reduce": "maximize" },
             "avgN": { "type": "number",  "reduce": "sum" },
             "avgD": { "type": "integer", "reduce": "sum" }
           },
@@ -134,12 +235,9 @@ We'll also use the ``reduce`` keyword annotation to describe how to reduce docum
       }
     }
 
-We've broken out the ``priceStats`` schema for re-use within the ``securityStats`` schema.
-``priceStats`` reduces the minimum and maximum price, as well as it's weighted
-average (where the average numerator and denominator are reduced individually).
-
-``securityStats`` then bundles a number of statistics of interest, along with the security,
-exchange, and date. To set things in motion, we now need to declare a derived collection:
+We've broken out the ``priceStats`` schema for reuse within the ``securityStats`` schema.
+``securityStats`` then models our statistics of interest as ``priceStats``, along with the
+security, exchange, and date. To put it all together, we now need to declare a derived collection:
 
 .. code-block:: yaml
 
@@ -150,43 +248,27 @@ exchange, and date. To set things in motion, we now need to declare a derived co
         derive:
           - fromCollection: name/of/collection/ticks
             withJq: |
-              {
-                exchange: .exchange,
-                security: .security,
-                # Date is produced by truncating from "2020-01-16T12:34:56Z" => "2020-01-16".
-                date:   .time | fromdate | strftime("%Y-%m-%d"),
-                # Price stat uses a by-volume weighted average of trades.
-                price:  {min: .last.price, max: .last.price, avgN: (.last.price * .last.size), avgD: .last.size},
-                # Bid, ask, and spread stats use equal weighting of observed prices across ticks.
-                bid:    {min: .bid.price,  max: .bid.price,  avgN: .bid.price, avgD: 1},
-                ask:    {min: .ask.price,  max: .ask.price,  avgN: .ask.price, avgD: 1},
-                spread: ((.ask.price - .bid.price) as $s | {min: $s, max: $s, avgN: $s, avgD: 1}),
-                volume: .last.size,
-                first:  .last,
-                last:   .last,
-              }
+                ... our jq filter ...
 
 Let's break this down. We're creating a new collection "stats" which has the ``securityStats``
 schema. We've associated a primary key, which indicates that two records having the same
 ``security`` and ``date`` property values may be reduced together using the ``reduce``
 annotations we've defined.
 
-We'll be deriving our collection from records of "ticks" using a jq_ filter. We haven't
-specified a ``groupBy`` clause, and the "ticks" collection itself doesn't have a primary
-key, which means that our jq filter will be invoked with every input record of "ticks".
+We'll be deriving our collection from records of "ticks" using our jq_ filter from before.
+We haven't specified a ``groupBy`` clause, and the "ticks" collection itself doesn't have
+a primary key, which means that our jq filter will be invoked with every input record of
+"ticks".
 
-The job of our filter is to *project* each tick record into the correct ``securityStats``
-shape. In other words, it's answering the question "If I see one (and only one) tick of
-this security today, what should its entry in ``securityStats`` look like?".
+Our jq_ filter will *project* each tick record into it's corresponding ``securityStats``
+shape. Under the hood, Estuary will then use the ``reduce`` annotations we defined with
+our schema in order to reduce ``securityStats`` instances over our ``(security, date)``
+composite primary key.
 
-And... that's it. Having defined what stats look like for a *single* tick, we can rely
-on our reduce annotations to correctly update statistics when there are *lots* of ticks.
-
-Our "stats" collection is off and running, and will continuously update itself from
-"ticks". We don't have to worry about scaling. Our jq filter is a "pure" function,
-and is dynamically scaled up and down as needed. Should the "ticks" or "stats"
-collection have a sufficiently high volume of records, it will automatically be
-partitioned as needed.
+And... that's it. Our "stats" collection is off and running, and will continuously update
+itself from "ticks". We don't have to worry about scaling. Our jq filter is easily scaled
+up and down as needed. Should the "ticks" or "stats" collection have a sufficiently high
+volume of records, it will automatically be partitioned as needed.
 
 .. tip::
 
@@ -227,14 +309,13 @@ is continuously updated to reflect the "stats" collection.
 .. code-block:: SQL
 
     -- This daily_stats SQL schema is statically inferred from its JSON-Schema.
-    -- Estuary may support additional annotations for advanced table creation use cases.
     CREATE TABLE daily_stats (
         exchange  VARCHAR NOT NULL
         security  VARCHAR NOT NULL,
         date      DATE    NOT NULL,
 
-        bid_min   DOUBLE PRECISION,
-        bid_max   DOUBLE PRECISION,
+        bid_low   DOUBLE PRECISION,
+        bid_high  DOUBLE PRECISION,
         bid_avgN  DOUBLE PRECISION,
         bid_avgD  INTEGER,
 
