@@ -11,12 +11,17 @@ shared source of truth, processed in real-time, with database-like simplicity.
 - **Derive** new collections which transform, enrich, and report over events.
 - **Materialize** collections into databases and SaaS services for analysis and activation.
 
-Build collections and express complex event flows and transformations using
-standard tools like JSON-Schema_, SQL, and jq_ filters -- no coding required.
-Use Estuary to capture application logs and enrich them into data lakes. Then
-materialize log summaries as real-time pivot tables within your PostgreSQL
-database. Or, build comprehensive user profiles in BigTable or Dynamo which
-continuously derive themselves from a live stream of user interactions.
+Capture streaming sources into collections with explicit JSON-Schema_ validation.
+Catalog and consume collections directly as clean "data lakes" using tools like Spark,
+Snowflake, dbt_ and Airflow_. Transform in real-time using SQL and jq_ to derive
+reporting pivot tables, merged user profiles, and anything else you dream up
+-- no coding required! Continuously materialize your creations into PostgreSQL,
+Redis, BigTable, and other tools for activation and analysis.
+
+.. _Spark: https://spark.apache.org/
+.. _dbt: https://www.getdbt.com/
+.. _Airflow: https://airflow.apache.org/
+.. _Snowflake: https://www.snowflake.com/
 
 Concepts
 =========
@@ -32,18 +37,17 @@ invalidate records already part of the collection.
 
 **Collections are optimized for stream processing**.
 
-   Collections ingest records with low latency, even when scaling to massive
-   record volumes (millions of QPS). The current readers of a collection are
-   notified of new records within milliseconds.
+   Ingest records with low latency, even when scaling to massive record volumes
+   (millions of QPS). The current readers of a collection are notified of new records
+   within milliseconds.
 
 **Collections are also Data Lakes**.
 
    Collections organize, index, and store records within a hierarchy of files
    implemented atop cloud storage. Data rests exclusively within buckets you own.
 
-   Files themselves hold record content (eg, JSON lines) with no special
-   formatting, and can be directly read using preferred tools and work flows --
-   including Map/Reduce, Spark, Snowflake, and BigQuery.
+   Files hold record content (eg, JSON lines) with no special formatting,
+   and can be directly processed using preferred tools and work flows.
 
 **Collections are a long-term source of truth**.
 
@@ -56,9 +60,9 @@ invalidate records already part of the collection.
 **A collection is either captured or derived**.
 
    A *captured* collection is one into which records are directly written.
-   Estuary provides ingestion APIs for adding events to captured collections.
-   An API service might publish events from live serving via HTTP PUTs,
-   or an AWS lambda might stream in Kinesis events.
+   Estuary provides HTTP and syslog APIs for capturing events into collections.
+   Ingested events are verified against the collection JSON-Schema_ and rejected
+   or dead-lettered when found invalid.
 
    *Derived* collections are akin to a materialized view in a database.
    They're declared in terms of source collections and transformations to apply,
@@ -72,7 +76,7 @@ invalidate records already part of the collection.
    push-down -- like Snowflake, BigQuery, and Hive itself. Estuary generates suitable
    external table definitions which can be plugged into these tools.
 
-   Explicit partitions derive field values from records themselves, using
+   Explicit partitions derive field values from records themselves, specified by
    JSON-Pointer_. A collection of stock market records might partition on the
    market exchange (``NYSE``, ``NASDAQ``, etc). Automatic partitions are managed
    by Estuary, and allow collections to scale up to arbitrary record volumes.
@@ -126,7 +130,7 @@ be updated by appending a collection record which sets a new value for a given k
 Then, the current state of the map can be *materialized* by reading collection
 records and indexing the present value for each key.
 
-Using a collection might seem rather round-about for a simple a key/value map--why not just
+Using a collection might seem rather round-about for a simple key/value map--why not just
 use DynamoDB or Memcached directly, and call it a day?--but its advantage becomes clear
 as soon as one wants *both* DynamoDB and Memcached, or indexes in multiple clouds or regions,
 or one wants to study how keys have changed over time. A collection can be read over and over
@@ -176,7 +180,7 @@ itself easily fits within the database.
    Estuary leverages this property to significantly reduce record volumes early on
    during processing -- intuitively, in a similar way to how Map/Reduce leverages
    Combiners. This practice lets Estuary easily handle collections with Zipfian_
-   primary key distributions.
+   key distributions.
 
 .. _Zipfian: https://en.wikipedia.org/wiki/Zipf%27s_law
 
@@ -184,7 +188,7 @@ itself easily fits within the database.
 Reduce Keyword
 ***************
 
-Estuary extends the JSON-Schema_ vocabulary with an additional ``reduce`` keyword,
+Estuary extends the JSON-Schema_ vocabulary with an additional ``reduce`` keyword
 which annotates how locations within a validated JSON document may be reduced
 into another document. A variety of reduction strategies are supported:
 
@@ -350,7 +354,7 @@ into another document. A variety of reduction strategies are supported:
     annotations, but details may change. For example, reduce annotations
     may introduce sketch "flavors" which are designed for compatibility with
     equivalents in target systems of interest, such as BigQuery or Snowflake
-    HLL's, etc.
+    HLLs, etc.
 
 
 Reduce annotations can be composed and nested to build powerful, reusable
