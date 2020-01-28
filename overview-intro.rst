@@ -2,26 +2,27 @@
 Introduction
 =============
 
-Estuary enables your *data operations* -- wiring data flows through the systems
-and services you use to store, process, index, and analyze data -- around a
-shared source of truth, processed in real-time, with database-like simplicity.
+Estuary enables your *data operations* -- the people, applications, services and vendors
+you rely on to store, process, index, and analyze data -- around a common and accessible
+source of truth that updates in real-time. Engineers, researchers, analysts, and other
+stakeholders are empowered to work with the data they need using the tools they prefer
+-- and to in-turn create data products for others to freely build upon.
 
-- **Capture** streaming data sets into long-lived "Collections" backed by cloud storage.
-- **Catalog** collections for discovery, re-use, and analysis using familiar tools.
-- **Derive** new collections which transform, enrich, and report over events.
+- **Capture** streaming data sets into long-lived "collections" backed by cloud storage.
+- **Catalog** collections for discovery and reuse across teams.
+- **Derive** new collections which transform, enrich, and summarize in real-time.
 - **Materialize** collections into databases and SaaS services for analysis and activation.
 
 Capture streaming sources into collections with explicit JSON-Schema_ validation.
-Catalog and consume collections directly as clean "data lakes" using tools like Spark,
-Snowflake, dbt_ and Airflow_. Transform in real-time using SQL and jq_ to derive
-reporting pivot tables, merged user profiles, and anything else you dream up
--- no coding required! Continuously materialize your creations into PostgreSQL,
-Redis, BigTable, and other tools for activation and analysis.
+Catalog and consume collections directly as clean "data lakes" using preferred
+tools like Spark, Snowflake, dbt_ and Airflow. Transform in real-time using SQL
+and jq_ to derive reporting pivot tables, merged user profiles, and anything else
+you dream up -- no coding required! Continuously materialize your creations into
+tools like PostgreSQL, DynamoDB, DataDog, and Elastic/Kibana for activation and
+analysis.
 
 .. _Spark: https://spark.apache.org/
 .. _dbt: https://www.getdbt.com/
-.. _Airflow: https://airflow.apache.org/
-.. _Snowflake: https://www.snowflake.com/
 
 Concepts
 =========
@@ -31,7 +32,7 @@ Collections
 
 An Estuary **Collection** is an append-only set of immutable *records*. Records are
 JSON documents, and each must be valid to the collection's associated JSON-Schema_.
-Schemas may impose no structure, may be rigorously specified, or fall anywhere in
+Schemas may impose no structure, may be rigorously specified, or fall somewhere in
 between. They may also evolve over time, though not in such a way that they
 invalidate records already part of the collection.
 
