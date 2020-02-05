@@ -7,11 +7,8 @@ Managing data flows within an enterprise is complicated and time consuming, espe
 Estuary makes it easy to keep your applications, databases, and SaaS tools in perfect sync.  How it works:
 
 - Plug Estuary into your data sources: Kinesis, Kafka, Segment, log files, and more.
-
 - Express transformations that select, group-by, aggregate, and join SQL records and JSON documents.
-
 - Load into anything: databases, data lakes, Elastic, DynamoDB, DataDog, Snowflake and more. ETL pipelines run continuously and destinations are always up-to-date.
-
 - Estuary projects integrate with your development workflows for automated testing, CI/CD & GitOps.
 
 Estuary can make it easy to turn any and all of your databases to real-time databases at any scale.
