@@ -2,27 +2,19 @@
 Introduction
 =============
 
-Estuary enables your *data operations* -- the people, applications, services and vendors
-you rely on to store, process, index, and analyze data -- around a common and accessible
-source of truth that updates in real-time. Engineers, researchers, analysts, and other
-stakeholders are empowered to work with the data they need using the tools they prefer
--- and to in-turn create data products for others to freely build upon.
+Managing data flows within an enterprise is complicated and time consuming, especially when there's a desire to gain insights and take actions in real-time.  Having a microservice oriented architecture is valuable but can further complicate things, leading to a tangled mess of data webs going from different sources of truth to databases and SaaS tools.
 
-- **Capture** streaming data sets into long-lived "collections" backed by cloud storage.
-- **Catalog** collections for discovery and reuse across teams.
-- **Derive** new collections which transform, enrich, and summarize in real-time.
-- **Materialize** collections into databases and SaaS services for analysis and activation.
+Estuary makes it easy to deploy and maintain real-time ETL pipelines which keep all your databases and SaaS tools in perfect sync.  How it works:
 
-Capture streaming sources into collections with explicit JSON-Schema_ validation.
-Catalog and consume collections directly as clean "data lakes" using preferred
-tools like Spark, Snowflake, dbt_ and Airflow. Transform in real-time using SQL
-and jq_ to derive reporting pivot tables, merged user profiles, and anything else
-you dream up -- no coding required! Continuously materialize your creations into
-tools like PostgreSQL, DynamoDB, DataDog, and Elastic/Kibana for activation and
-analysis.
+- Plug Estuary into your data sources: Kinesis, Kafka, Segment, log files, and more.
 
-.. _Spark: https://spark.apache.org/
-.. _dbt: https://www.getdbt.com/
+- Express transformations that select, group-by, aggregate, and join SQL records and JSON documents.
+
+- Load into anything: databases, data lakes, Elastic, DynamoDB, DataDog, Snowflake and more. ETL pipelines run continuously and destinations are always up-to-date.
+
+- Track changes to pipelines and collaborate with users using version control powered by Git.
+
+Estuary can make it easy to turn any and all of your databases to real-time databases at any scale.
 
 Concepts
 =========
