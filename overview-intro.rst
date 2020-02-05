@@ -2,9 +2,9 @@
 Introduction
 =============
 
-Managing data flows within an enterprise is complicated and time consuming, especially when there's a desire to gain insights and take actions in real-time.  Having a microservice oriented architecture is valuable but can further complicate things, leading to a tangled mess of data webs going from different sources of truth to databases and SaaS tools.
+Managing data flows within an enterprise is complicated and time consuming, especially when there's a desire to gain insights and take actions in real-time.  Having a microservice oriented architecture is valuable but can further complicate things, leading to a tangled mess of data webs between applications, various source-of-truth databases and external SaaS tools.
 
-Estuary makes it easy to deploy and maintain real-time ETL pipelines which keep all your databases and SaaS tools in perfect sync.  How it works:
+Estuary makes it easy to keep your applications, databases, and SaaS tools in perfect sync.  How it works:
 
 - Plug Estuary into your data sources: Kinesis, Kafka, Segment, log files, and more.
 
@@ -12,7 +12,7 @@ Estuary makes it easy to deploy and maintain real-time ETL pipelines which keep 
 
 - Load into anything: databases, data lakes, Elastic, DynamoDB, DataDog, Snowflake and more. ETL pipelines run continuously and destinations are always up-to-date.
 
-- Track changes to pipelines and collaborate with users using version control powered by Git.
+- Estuary projects integrate with your development workflows for automated testing, CI/CD & GitOps.
 
 Estuary can make it easy to turn any and all of your databases to real-time databases at any scale.
 
