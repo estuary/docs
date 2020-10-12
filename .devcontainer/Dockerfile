@@ -1,29 +1,27 @@
-# Flow release artifacts
-FROM quay.io/estuary/flow:latest
-
 # Update the VARIANT arg in docker-compose.yml to pick a Node version: 10, 12, 14
-ARG VARIANT=14
+ARG VARIANT=12
+
+FROM quay.io/estuary/flow:v0.1.0-5-g0168ef2
 FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:${VARIANT}
 
-# Update args in docker-compose.yaml to set the UID/GID of the "node" user.
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
-RUN if [ "$USER_GID" != "1000" ] || [ "$USER_UID" != "1000" ]; then \
-        groupmod --gid $USER_GID node \
-        && usermod --uid $USER_UID --gid $USER_GID node \
-        && chmod -R $USER_UID:$USER_GID /home/node \
-        && chmod -R $USER_UID:root /usr/local/share/nvm /usr/local/share/npm-global; \
-    fi
+# Copy in Estuary Flow release binaries.
+COPY --from=0 /usr/local/bin/* /usr/local/bin/
+# Generate Flow catalog JSON-Schema for integration with VSCode.
+RUN flowctl json-schema > /usr/local/etc/flow.schema.json
 
-# [Optional] Uncomment this section to install additional OS packages.
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends <your-package-list-here>
+# Update args in docker-compose.yaml to set the UID/GID of the "flow" user.
+# ARG USER_UID=1000
+# ARG USER_GID=$USER_UID
+# RUN if [ "$USER_GID" != "1000" ] || [ "$USER_UID" != "1000" ]; then \
+#         groupmod --gid $USER_GID flow \
+#         && usermod --uid $USER_UID --gid $USER_GID flow \
+#         && chmod -R $USER_UID:$USER_GID /home/flow \
+#         && chmod -R $USER_UID:root /usr/local/share/nvm /usr/local/share/npm-global; \
+#     fi
 
-# [Optional] Uncomment if you want to install an additional version of node using nvm
-# ARG EXTRA_NODE_VERSION=10
-# RUN su node -c "source /usr/local/share/nvm/nvm.sh && nvm install ${EXTRA_NODE_VERSION}"
-
-# [Optional] Uncomment if you want to install more global node packages
-# RUN sudo -u node npm install -g <your-package-list-here>
-
-COPY --from=0 * /usr/local/bin
+COPY requirements.txt /usr/local/etcd/flow-doc-requirements.txt
+RUN apt-get update \
+    && apt-get -y install --no-install-recommends \
+        python3-setuptools \
+        python3-pip \
+    && pip3 install -r /usr/local/etcd/flow-doc-requirements.txt
