@@ -1,0 +1,8 @@
+{
+  "cSpell.words": [
+    "citi"
+  ],
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "restructuredtext.confPath": "${workspaceFolder}"
+}
