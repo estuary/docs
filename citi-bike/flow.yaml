@@ -1,2 +1,4 @@
 import:
   - rides.flow.yaml
+  - bike-locations.flow.yaml
+  - bike-moves.flow.yaml

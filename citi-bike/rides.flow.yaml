@@ -1,9 +1,15 @@
 collections:
   - name: examples/citi-bike/rides
+    # Collection schema is provided as a relative URL to a JSON Schema.
+    # This could also be an external URL (e.g, http://example/schema),
+    # or include a fragment pointer (e.g, ride.schema.yaml#/$defs/station)
+    # to identify a specific schema contained within the larger file.
     schema: ride.schema.yaml
+    # Composite key by which documents of the collection are indexed.
+    # Here, we use a unique identifier for each ride record.
     key: [/bike_id, /begin/timestamp]
+    # Define projections for each CSV header name used in the source dataset.
     projections:
-      # Define projections for the CSV header names used in the source dataset.
       bikeid: /bike_id
       birth year: /birth_year
       end station id: /end/station/id
@@ -19,3 +25,68 @@ collections:
       stoptime: /end/timestamp
       tripduration: /duration_seconds
       usertype: /user_type
+
+# Catalog tests are named and organized as a series of "ingest"
+# and "verify" steps.
+tests:
+  "Expect we can ingest individual ride events":
+    # Ingestion steps ingest documents into a named collection.
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents:
+          # Use YAML references and anchors to give test documents
+          # alias names by which they can be re-used.
+          - &ride1
+            begin:
+              station:
+                geo: { latitude: 40.74, longitude: -74.03 }
+                id: 3184
+                name: "Paulus Hook"
+              timestamp: "2020-09-01 16:18:42.2140"
+            bike_id: 17558
+            birth_year: 1983
+            duration_seconds: 17932
+            end:
+              station:
+                geo: { latitude: 40.72, longitude: -74.05 }
+                id: 3269
+                name: "Brunswick & 6th"
+              timestamp: "2020-09-01 21:17:34.4800"
+            gender: 2
+            user_type: Customer
+          - &ride2
+            begin:
+              station:
+                geo: { latitude: 40.71, longitude: -74.03 }
+                id: 3184
+                name: "Paulus Hook"
+              timestamp: "2020-09-01 17:17:40.2810"
+            bike_id: 17702
+            birth_year: 1975
+            duration_seconds: 994
+            end:
+              station:
+                geo: { latitude: 40.72, longitude: -74.04 }
+                id: 3203
+                name: Hamilton Park
+              timestamp: "2020-09-01 17:34:14.6080"
+            gender: 1
+            user_type: Subscriber
+    # Verify steps assert the contents of a collection, after all ingests
+    # and transformations have been fully processed. Documents are in their
+    # natural order, as per the collection's key.
+    - verify:
+        # Expect that we ingested both rides.
+        collection: examples/citi-bike/rides
+        documents: [*ride1, *ride2]
+
+  "Expect that rides are indexed to remove duplicates":
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents: [*ride1]
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents: [*ride1]
+    - verify:
+        collection: examples/citi-bike/rides
+        documents: [*ride1]

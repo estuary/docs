@@ -1,2 +1,9 @@
 import:
   - citi-bike/flow.yaml
+
+materializationTargets:
+  # When this repository is run as a VSCode devcontainer, it composes a PostgreSQL
+  # container which may be accessed for testing.
+  testDB:
+    postgres:
+      uri: postgresql://flow:flow@localhost:5432/flow?sslmode=disable

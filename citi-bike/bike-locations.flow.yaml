@@ -1,0 +1,88 @@
+# Flow catalogs must import collections which they use.
+import:
+  - rides.flow.yaml # Needed for "rides" collection.
+
+collections:
+  # Derive a view of the last station at which each bike arrived.
+  - name: examples/citi-bike/bike-locations
+    # The schema is represented "inline", instead of using a relative URL.
+    # This is handy for simple or one-off schemas, but it cannot be referenced
+    # and re-used elsewhere.
+    schema:
+      type: object
+      properties:
+        bike_id: { $ref: ride.schema.yaml#/properties/bike_id }
+        last: { $ref: ride.schema.yaml#/$defs/terminus }
+      required: [bike_id, last]
+    # Index the collection on individual bikes.
+    key: [/bike_id]
+    # Derived collections are built by transforming other "source" collections.
+    derivation:
+      transform:
+        # Use a transform which reads from "rides" and applies a TypeScript lambda
+        # to map each ride into a published "bike-locations" document.
+        locationFromRide:
+          source:
+            name: examples/citi-bike/rides
+          publish:
+            # "source" is a special variable which holds a document instance
+            # from the source collection, using an annotated TypeScript type
+            # that's inferred from the examples/citi-bike/rides schema.
+            #
+            # Similarly, this lambda's return context uses a TypeScript type
+            # inferred from this collection's schema.
+            #
+            # Try introducing a typo of "last", or returning the wrong type,
+            # and see what happens on next `flowctl build`.
+            nodeJS: |
+              return [{ bike_id: source.bike_id, last: source.end }];
+
+tests:
+  "Expect bike-locations derives from rides":
+    # Begin with rides for both of bikes A & B.
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents:
+          - bike_id: &bikeA 17558
+            begin:
+              station: { id: 3184, name: "Paulus Hook" }
+              timestamp: "2020-09-01 16:18:42.2140"
+            end: &end1
+              station:
+                geo: { latitude: 40.72, longitude: -74.05 }
+                id: 3269
+                name: "Brunswick & 6th"
+              timestamp: "2020-09-01 21:17:34.4800"
+          - bike_id: &bikeB 17702
+            begin:
+              station: { id: 3184, name: "Paulus Hook" }
+              timestamp: "2020-09-01 17:17:40.2810"
+            end: &end2
+              station:
+                geo: { latitude: 40.72, longitude: -74.04 }
+                id: 3203
+                name: Hamilton Park
+              timestamp: "2020-09-01 17:34:14.6080"
+    # Check we derived locations for bikes A & B.
+    - verify:
+        collection: examples/citi-bike/bike-locations
+        documents:
+          - { bike_id: *bikeA, last: *end1 }
+          - { bike_id: *bikeB, last: *end2 }
+    # Bike A takes another ride.
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents:
+          - bike_id: *bikeA
+            begin: *end1
+            end: &end3
+              station:
+                id: 3483
+                name: "Montgomery St"
+              timestamp: "2020-09-01 22:09:29.0380"
+    # Bike A's new location is reflected.
+    - verify:
+        collection: examples/citi-bike/bike-locations
+        documents:
+          - { bike_id: *bikeA, last: *end3 }
+          - { bike_id: *bikeB, last: *end2 }

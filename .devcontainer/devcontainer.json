@@ -1,5 +1,5 @@
 {
-	"name": "Estuary Flow Studio",
+	"name": "Estuary Flow",
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "flow",
 	"workspaceFolder": "/workspace",
@@ -57,8 +57,9 @@
 		5432,
 		8081,
 	],
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "yarn install",
+	// Build the repository catalog on container creation.
+	// This can take a few moments while NPM dependencies are pulled.
+	"postCreateCommand": "flowctl build --source flow.yaml",
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
 	// "remoteUser": "flow"
 }
