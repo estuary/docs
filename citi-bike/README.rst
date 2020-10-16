@@ -101,15 +101,15 @@ document:
    and POSTs of JSON over HTTP. More are planned, such as Database, Kenesis,
    and Kafka integrations.
 
-Deriving Current Bike Status
-----------------------------
+Last-Seen Station by Bike
+--------------------------
 
 We'll declare and test a collection that derives, for each bike, the station it last arrived at:
 
 .. literalinclude:: bike-locations.flow.yaml
    :language: yaml
 
-We can materialize the collection into a database:
+We can materialize the collection into a database table:
 
 .. code-block:: console
 
@@ -117,18 +117,17 @@ We can materialize the collection into a database:
 
    $ psql postgres://flow:flow@localhost:5432 -c 'select bike_id, "seen/station/name", "seen/timestamp" from bike_locations limit 5;'
 
+Materialization tables always use the collection's key, and are update continuously to reflect ongoing changes of the collection.
 
-Materializing into PostgreSQL
------------------------------
+Bike Relocations
+----------------
 
-Foo
+Bikes are moved in the Citi Bike system, but only show up as "holes" in the data
+where a bike mysteriously ends a ride at one station and starts its next ride at
+another station. Use registers to turn these into explicit "relocation" events:
 
-Bar
----
+.. literalinclude:: relocations.flow.yaml
+   :language: yaml
 
-Baz
-
-Bing
-----
-
-Moar
+Station Status
+--------------

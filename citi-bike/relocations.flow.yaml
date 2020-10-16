@@ -1,0 +1,103 @@
+import:
+  - rides.flow.yaml
+
+collections:
+  # Bikes are periodically moved in the Citi Bike system, which show up as
+  # a bike ending a ride at one station and then starting a ride at another.
+  # Derive explicit relocation events when this happens.
+  - name: examples/citi-bike/relocations
+    schema:
+      type: object
+      properties:
+        bike_id: { $ref: ride.schema.yaml#/properties/bike_id }
+        from: { $ref: ride.schema.yaml#/$defs/terminus }
+        to: { $ref: ride.schema.yaml#/$defs/terminus }
+      required: [bike_id, from, to]
+    # Unique composite key for each relocation.
+    key: [/bike_id, /from/timestamp]
+
+    derivation:
+      # We must determine if the start of a current ride is different than the
+      # end of a previous ride, for each bike. But, we don't have the prior
+      # ending station station available in the source document.
+      #
+      # Registers provide a place to persist state that's updated as source
+      # documents are processed. Each source document is mapped to a specific
+      # register through its shuffle key.
+      #
+      # Registers are shared across all transforms of the derivation. Transforms
+      # reading from different source collections can share state through
+      # registers by using a shuffle key that's common to both.
+      register:
+        # Registers are JSON documents, just like collection collection documents,
+        # and have an associated schema which is validated against.
+        schema: ride.schema.yaml#/$defs/terminus
+        # If a particular shuffle key value has no set register, "initial" is
+        # the stand-in value which is provided to the lambda. It must validate
+        # against the register's schema.
+        initial:
+          station: { id: 0, name: "" }
+          timestamp: "0000-00-00 00:00:00.0"
+
+      transform:
+        checkForRelocation:
+          source:
+            name: examples/citi-bike/rides
+          # Shuffle on bike ID to preserve the ending station of each bike.
+          shuffle: [/bike_id]
+          update:
+            # An "update" lambda updates the register of the current shuffle key.
+            # Here we retain the ending station of the current ride.
+            nodeJS: return [source.end];
+          publish:
+            # A "publish" lambda always runs after an "update" lambda.
+            # Along with the `source` variable, publish lambdas have
+            # automatic variables `current` and `previous` in their scope:
+            #
+            # * `previous` is the register value *before* applying the "update" lambda.
+            # * `current` is the register *after* applying "update".
+            #
+            # If there is no "update" lambda, `current` and `previous` are the same.
+            nodeJS: |
+              if (previous.station.id != 0 && previous.station.id != source.begin.station.id) {
+                return [{ bike_id: source.bike_id, from: previous, to: source.begin }];
+              }
+              return [];
+
+tests:
+  "Expect a sequence of connected rides don't produce a relocation event":
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents:
+          # Bike goes from station 1 => 2 => 3 => 4.
+          - bike_id: &bike 17558
+            begin: &station1
+              station: { id: 3276, name: "Marin Light Rail" }
+              timestamp: "2020-09-01 09:21:12.3090"
+            end: &station2
+              station: { id: 3639, name: "Harborside" }
+              timestamp: "2020-09-01 13:48:12.3830"
+          - bike_id: *bike
+            begin: *station2
+            end: &station3
+              station: { id: 3202, name: "Newport PATH" }
+              timestamp: "2020-09-01 14:33:35.1020"
+          - bike_id: *bike
+            begin: *station3
+            end: &station4
+              station: { id: 3267, name: "Morris Canal" }
+              timestamp: "2020-09-01 16:49:30.1610"
+    - verify:
+        collection: examples/citi-bike/relocations
+        documents: []
+
+  "Expect a disconnected ride produces a relocation":
+    - ingest:
+        collection: examples/citi-bike/rides
+        documents:
+          - { bike_id: *bike, begin: *station1, end: *station2 }
+          - { bike_id: *bike, begin: *station3, end: *station4 }
+    - verify:
+        collection: examples/citi-bike/relocations
+        documents:
+          - { bike_id: *bike, from: *station2, to: *station3 }
