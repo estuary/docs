@@ -2,7 +2,7 @@ Estuary Flow Documentation (Preview)
 ====================================
 
 This is Estuary Flow's product documentation. This repository lives at
-https://github.com/estuary/flow/docs.
+https://github.com/estuary/docs.
 
 .. note::
 

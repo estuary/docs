@@ -1,7 +1,7 @@
 # Update the VARIANT arg in docker-compose.yml to pick a Node version: 10, 12, 14
 ARG VARIANT=12
 
-FROM quay.io/estuary/flow:v0.1.0-25-g97f5989
+FROM quay.io/estuary/flow:v0.1.0-34-gf321467
 FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:${VARIANT}
 
 # Copy in Estuary Flow release binaries.
@@ -22,6 +22,8 @@ RUN flowctl json-schema > /usr/local/etc/flow.schema.json
 COPY requirements.txt /usr/local/etcd/flow-doc-requirements.txt
 RUN apt-get update \
     && apt-get -y install --no-install-recommends \
-        python3-setuptools \
+        postgresql-client \
+        pv \
         python3-pip \
+        python3-setuptools \
     && pip3 install -r /usr/local/etcd/flow-doc-requirements.txt

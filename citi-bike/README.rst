@@ -90,7 +90,9 @@ document:
    $ flowctl develop
 
    # Pipe CSV rows into Flow's CSV WebSocket ingestion API:
-   $ unzip -p JC-202009-citibike-tripdata.csv.zip | websocat --protocol csv/v1 ws://localhost:8081/ingest/examples/citi-bike/rides
+   $ unzip -p JC-202009-citibike-tripdata.csv.zip \
+      | pv --line-mode --quiet --rate-limit 100 \
+      | websocat --protocol csv/v1 ws://localhost:8081/ingest/examples/citi-bike/rides
    {"Offsets":{"examples/citi-bike/rides/pivot=00":1416},"Processed":3}
    {"Offsets":{"examples/citi-bike/rides/pivot=00":473577},"Processed":1033}
    {"Offsets":{"examples/citi-bike/rides/pivot=00":775687},"Processed":1692}
@@ -106,16 +108,16 @@ Last-Seen Station by Bike
 
 We'll declare and test a collection that derives, for each bike, the station it last arrived at:
 
-.. literalinclude:: bike-locations.flow.yaml
+.. literalinclude:: last-seen.flow.yaml
    :language: yaml
 
 We can materialize the collection into a database table:
 
 .. code-block:: console
 
-   $ flowctl materialize --collection examples/citi-bike/bike-locations --all-fields --table-name bike_locations --target testDB
+   $ flowctl materialize --collection examples/citi-bike/last-seen --all-fields --table-name last_seen --target testDB
 
-   $ psql postgres://flow:flow@localhost:5432 -c 'select bike_id, "seen/station/name", "seen/timestamp" from bike_locations limit 5;'
+   $ psql postgres://flow:flow@localhost:5432 -c 'select bike_id, "last/station/name", "last/timestamp" from last_seen limit 5;'
 
 Materialization tables always use the collection's key, and are update continuously to reflect ongoing changes of the collection.
 
@@ -129,5 +131,22 @@ another station. Use registers to turn these into explicit "relocation" events:
 .. literalinclude:: relocations.flow.yaml
    :language: yaml
 
+We can use ``gazctl`` to observe relocation events, as they're derived:
+
+.. code-block:: console
+
+   $ gazctl journals read -l prefix=examples/citi-bike/relocations/ | jq -c '.'
+
 Station Status
 --------------
+
+.. literalinclude:: station.schema.yaml
+   :language: yaml
+
+
+.. literalinclude:: stations.flow.yaml
+   :language: yaml
+
+.. code-block:: console
+
+   $ flowctl materialize --collection examples/citi-bike/stations --all-fields --table-name stations --target testDB

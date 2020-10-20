@@ -4,7 +4,7 @@ import:
 
 collections:
   # Derive the last station at which each bike arrived.
-  - name: examples/citi-bike/bike-locations
+  - name: examples/citi-bike/last-seen
     # The schema is represented "inline", instead of using a relative URL.
     # This is handy for simple or one-off schemas, but it cannot be referenced
     # and re-used elsewhere.
@@ -20,7 +20,7 @@ collections:
     derivation:
       transform:
         # Use a transform which reads from "rides" and applies a TypeScript lambda
-        # to map each ride into a published "bike-locations" document.
+        # to map each ride into a published "last-seen" document.
         locationFromRide:
           source:
             name: examples/citi-bike/rides
@@ -38,7 +38,7 @@ collections:
               return [{ bike_id: source.bike_id, last: source.end }];
 
 tests:
-  "Expect bike-locations derives from rides":
+  "Expect last-seen derives from rides":
     # Begin with rides for both of bikes A & B.
     - ingest:
         collection: examples/citi-bike/rides
@@ -65,7 +65,7 @@ tests:
               timestamp: "2020-09-01 17:34:14.6080"
     # Check we derived locations for bikes A & B.
     - verify:
-        collection: examples/citi-bike/bike-locations
+        collection: examples/citi-bike/last-seen
         documents:
           - { bike_id: *bikeA, last: *end1 }
           - { bike_id: *bikeB, last: *end2 }
@@ -82,7 +82,7 @@ tests:
               timestamp: "2020-09-01 22:09:29.0380"
     # Bike A's new location is reflected.
     - verify:
-        collection: examples/citi-bike/bike-locations
+        collection: examples/citi-bike/last-seen
         documents:
           - { bike_id: *bikeA, last: *end3 }
           - { bike_id: *bikeB, last: *end2 }
