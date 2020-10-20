@@ -115,7 +115,7 @@ We can materialize the collection into a database table:
 
 .. code-block:: console
 
-   $ flowctl materialize --collection examples/citi-bike/last-seen --all-fields --table-name last_seen --target testDB
+   $ flowctl materialize --collection examples/citi-bike/last-seen --table-name last_seen --target testDB
 
    $ psql postgres://flow:flow@localhost:5432 -c 'select bike_id, "last/station/name", "last/timestamp" from last_seen limit 5;'
 
@@ -135,7 +135,7 @@ We can use ``gazctl`` to observe relocation events, as they're derived:
 
 .. code-block:: console
 
-   $ gazctl journals read -l prefix=examples/citi-bike/relocations/ | jq -c '.'
+   $ gazctl journals read --block -l prefix=examples/citi-bike/relocations/ | jq -c '.'
 
 Station Status
 --------------
@@ -149,4 +149,4 @@ Station Status
 
 .. code-block:: console
 
-   $ flowctl materialize --collection examples/citi-bike/stations --all-fields --table-name stations --target testDB
+   $ flowctl materialize --collection examples/citi-bike/stations --table-name stations --target testDB
