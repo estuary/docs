@@ -33,4 +33,15 @@ properties:
     type: object
     reduce: { strategy: merge }
 
+  stable:
+    type: object
+    reduce:
+      strategy: set
+      key: [""]
+
+    additionalProperties:
+      type: array
+      items: { type: integer }
+      reduce: { strategy: merge }
+
 reduce: { strategy: merge }

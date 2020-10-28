@@ -6,24 +6,43 @@ collections:
   - name: examples/citi-bike/stations
     key: [/id]
     schema: station.schema.yaml
+    projections:
+      stable: /stable/add
 
     derivation:
       transform:
         arrivalAndDeparture:
           source: { name: examples/citi-bike/rides }
+          readDelay: 1s
           publish:
             nodeJS: |
               return [
-                { ...source.end.station, arrival: { ride: 1 } },
-                { ...source.begin.station, departure: { ride: 1 } },
+                {
+                  arrival: { ride: 1 },
+                  stable: { add: [source.bike_id] },
+                  ...source.end.station,
+                },
+                {
+                  departure: { ride: 1 },
+                  stable: { remove: [source.bike_id] },
+                  ...source.begin.station,
+                },
               ];
         relocations:
           source: { name: examples/citi-bike/relocations }
           publish:
             nodeJS: |
               return [
-                { ...source.to.station, arrival: { move: 1 } },
-                { ...source.from.station, departure: { move: 1 } },
+                {
+                  arrival: { move: 1 },
+                  stable: { add: [source.bike_id] },
+                  ...source.to.station,
+                },
+                {
+                  departure: { move: 1 },
+                  stable: { remove: [source.bike_id] },
+                  ...source.from.station,
+                },
               ];
 
 tests:
@@ -51,9 +70,13 @@ tests:
     - verify:
         collection: examples/citi-bike/stations
         documents:
-          - { <<: *Newport, departure: { ride: 1 } }
-          - { <<: *Marin, departure: { ride: 1 } }
-          - { <<: *Harborside, arrival: { ride: 2 } }
+          - <<: *Newport
+            departure: { ride: 1 }
+          - <<: *Marin
+            departure: { ride: 1 }
+          - <<: *Harborside
+            arrival: { ride: 2 }
+            stable: { add: [*bikeA, *bikeB] }
 
     - ingest:
         collection: examples/citi-bike/rides
@@ -73,9 +96,12 @@ tests:
           - <<: *Newport
             arrival: { ride: 1 }
             departure: { ride: 1 }
+            stable: { add: [*bikeB] }
           - <<: *Marin
             arrival: { ride: 1, move: 1 }
             departure: { ride: 2 }
+            stable: { add: [*bikeA] }
           - <<: *Harborside
             arrival: { ride: 2 }
             departure: { ride: 1, move: 1 }
+            stable: { add: [] }
