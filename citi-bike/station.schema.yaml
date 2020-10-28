@@ -34,11 +34,16 @@ properties:
     reduce: { strategy: merge }
 
   stable:
+    description: "Set of Bike IDs which are currently at this station"
     type: object
+
     reduce:
       strategy: set
+      # Use bike IDs as their own keys.
       key: [""]
 
+    # Sets are composed of 'add', 'intersect', and 'remove' components.
+    # Here, we're representing the set as an array of integer bike IDs.
     additionalProperties:
       type: array
       items: { type: integer }
