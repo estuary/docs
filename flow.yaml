@@ -1,5 +1,6 @@
 import:
   - citi-bike/flow.yaml
+  - reductions/flow.yaml
 
 materializationTargets:
   # When this repository is run as a VSCode devcontainer, it composes a PostgreSQL

@@ -49,13 +49,6 @@ It defines the *shape* that documents can take.
    such as *reduction strategies*, which detail how multiple document instances
    can be combined together.
 
-.. note::
-
-   A core design goal of Flow is that users need only provide a modeling of
-   their data *one time*, as a JSON schema. Thereafter, Flow analyzes that
-   schema to provide automatic transformations into other schema flavors,
-   like SQL dialects, TypeScript types, and more.
-
 Capturing Rides
 ---------------
 

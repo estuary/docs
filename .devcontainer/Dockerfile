@@ -1,7 +1,7 @@
 # Update the VARIANT arg in docker-compose.yml to pick a Node version: 10, 12, 14
 ARG VARIANT=12
 
-FROM quay.io/estuary/flow:v0.1.0-53-g3c899c1
+FROM quay.io/estuary/flow:v0.1.0-62-g24f759f
 FROM mcr.microsoft.com/vscode/devcontainers/javascript-node:${VARIANT}
 
 # Copy in Estuary Flow release binaries.
