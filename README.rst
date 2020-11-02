@@ -1,7 +1,7 @@
-Estuary Flow Documentation (Preview)
-====================================
+Estuary Flow (Preview)
+======================
 
-Estuary *Flow* unifies technologies and teams around a shared understanding of
+Estuary Flow unifies technologies and teams around a shared understanding of
 an organization's data, that updates continuously as new data records come in.
 Flow works with the places where you produce or consume data today -- analytics
 warehouses, OLTP databases, key/value stores, streaming systems, or SaaS APIs --
@@ -20,7 +20,7 @@ transition to low latency updates of new data.
 
 Flow is configuration driven and uses a developer-centric workflow that emphasizes
 version control, composition and re-use, rich schematization, and built in testing.
-It's runtime offers online scaling, and takes best advantage of data reductions
+It's runtime offers flexible scaling, and takes best advantage of data reductions
 and cloud pricing models to offer a surprisingly low total cost of ownership.
 
 This documentation lives at https://github.com/estuary/docs,
@@ -68,5 +68,5 @@ Table of Contents
    :caption: Overview
 
    Concepts <concepts>
-   Example: Citi Bike <citi-bike/README>
    Reductions <reductions/README>
+   Example: Citi Bike <citi-bike/README>

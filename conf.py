@@ -19,7 +19,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u'Estuary Flow Documentation (Preview)'
+project = u'Estuary Flow (Preview)'
 copyright = u'2020, Estuary Tech, Inc'
 author = u'Estuary Tech, Inc'
 

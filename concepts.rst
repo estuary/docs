@@ -7,7 +7,7 @@ Collection
 Flow's central concept is a **collection**: an append-only set of immutable JSON
 documents. Every collection has an associated schema that documents must
 validate against. Collections are either *captured*, meaning documents are
-directly added via Flow's ingestion APIs, or *derived* by applying
+directly added via Flow's ingestion APIs, or they're *derived* by applying
 transformations to other source collections, which may themselves be either
 captured or derived. A group of collections are held within a **catalog**.
 
@@ -17,7 +17,7 @@ captured or derived. A group of collections are held within a **catalog**.
    use that collection are immediately notified (within milliseconds). This allows Flow
    to minimize end-to-end processing latency.
 
-**Collections are also Data Lakes**.
+**Collections are "Data Lakes"**.
 
    Collections organize, index, and durably store documents within a hierarchy of files
    implemented atop cloud storage. These files are Flow's native, source-of-truth
@@ -37,6 +37,11 @@ captured or derived. A group of collections are held within a **catalog**.
    A new derivation or materialization will efficiently back-fill over all
    collection documents -- even where they span months or even years of data --
    by reading directly out of cloud storage.
+
+   Crucially, a high scale back-fill that sources from a collection doesn't compete
+   with and cannot harm the collection's ability to accept new writes, as reads
+   depend *only* on cloud storage for serving up historical data. This is a
+   guarantee that's unique to Flow, through its Gazette-based architecture.
 
 **Collections may have logical partitions**.
 
@@ -75,28 +80,31 @@ Catalogs
 Flow uses YAML or JSON source files, called *catalog sources*, to define the
 various entities which Flow understands (collections, schemas, tests, etc).
 
-One or more sources are built into a *catalog database* by the ``flowctl``
-CLI tool, which is a SQLite database holding a compiled form of the catalog.
-Catalog databases are what the Flow runtime actually executes against.
+One or more sources are built into a *catalog database* by the ``flowctl build``
+CLI tool. Catalog databases are SQLite files holding a compiled form of the catalog,
+and are what the Flow runtime actually executes against.
 
-import
-------
+Catalog sources are divided into sections.
+
+**import** section
+------------------
 
 A goal of catalogs is that they be composable and re-useable: catalog sources
 are able to import other sources, and it's recommended that authors structure
 their sources in ways that make sense for their projects, teams, and
 organization.
 
-The ``import`` stanza is a list of partial or absolute URLs, which are always
+The ``import`` section is a list of partial or absolute URLs, which are always
 evaluated relative to the base directory of the current source.
 For example, these are possible imports within a catalog source:
 
 .. code-block:: yaml
 
+    # Suppose we're in file "/path/dir/flow.yaml"
     import:
-      - sub/directory/flow.yaml
-      - ../sibling/directory/flow.yaml
-      - https://example/path/flow.yaml
+      - sub/directory/flow.yaml        # Resolves to "file:///path/dir/sub/directory/flow.yaml".
+      - ../sibling/directory/flow.yaml # Resolves to "file:///path/sibling/directory/flow.yaml".
+      - https://example/path/flow.yaml # Uses the absolute url.
 
 The import rules are designed so that a catalog doesn't have to do anything
 special in order to be imported by another source, and flowctl can even
@@ -107,21 +115,23 @@ directly build remote sources:
    # Build this documentation repository's Flow catalog.
    $ flowctl build -v --source https://raw.githubusercontent.com/estuary/docs/developer-docs/flow.yaml
 
-JSON schemas also support import semantics via the schema ``$ref`` keyword.
-The same import rules apply for JSON Schemas, and it's recommended to directly
-reference the authoritative source of an external schema.
+JSON schemas have a ``$ref`` keyword, by which local and external schema URLs may be
+referenced. Flow uses these same import rules for resolving JSON schemas, and it's
+recommended to directly reference the authoritative source of an external schema.
 
 flowctl fetches and resolves all catalog and JSON Schema sources at build time,
 and the resulting catalog database is a self-contained snapshot
-of these resources as they were at the time the catalog was built.
+of these resources *as they were* at the time the catalog was built.
 
-collections
------------
+**collections** section
+-----------------------
 
-The ``collections`` stanza is a list of collection definitions within a catalog
-source. A collection must be defined before it may be used as a source of
-another collection. Sources may also use collections defined in other catalog
-sources, but are required to import it (directly or indirectly).
+The ``collections`` section is a list of collection definitions within a catalog
+source. A collection must be defined before it may be used as a source within
+another collection.
+
+Derived collections may also reference collections defined in other catalog sources,
+but are required to first import them (directly or indirectly).
 
 materializationTargets
 ----------------------
@@ -129,42 +139,42 @@ materializationTargets
 ``materializationTargets`` define short, accessible names for target systems --
 like SQL databases -- that can be materialized into.
 
+They encapsulate connection details and configuration of systems behind a
+memorable, authoritative name. See Materializations_ for more.
+
 tests
 -----
 
-In addition to data expectations carried by schemas, Flow catalogs can also
-define functional *contract tests* which verify the integrated end-to-end
-behaviors of one or more collections. You'll see examples of these tests
-throughout this documentation.
+Flow catalogs can also define functional *contract tests* which verify the
+integrated end-to-end behaviors of one or more collections. You'll see
+examples of these tests throughout this documentation.
 
-Tests are named and specified by the ``tests`` stanza, and are executed by
-the "flowctl test" command. A single test may have one or more steps,
-where each step is an ``ingest`` or a ``verify``.
+Tests are named and specified by the ``tests`` section, and are executed by
+the "flowctl test" command against a local instance of the Flow runtime.
+A single test may have one or more steps, where each is one of:
 
-ingest:
+**ingest**:
 
     Ingest the given document fixtures into the named collection.
     Documents are required to validate against the collection's schema.
 
     All of the documents written by an ingest are guaranteed to be processed
     before those of a following ingest. However, documents *within* an
-    ingest are written in collection key order. And, if documents within an
-    ingest span multiple logical partitions, they may be processed in *any*
-    order.
+    ingest are written in collection key order.
 
-verify:
+**verify**:
 
     Verify runs after all prior "ingest" steps have been fully processed,
-    and then compare given document fixtures to the contents of a named collection.
+    and then compares provided fixtures to the contents of a named collection.
 
     Comparisons are done using fully combined documents, as if the collection
     under test had been materialized. Notably this means there will be
     only one document for a given collection key, and documents always
     appear in collection key order.
 
-    Test fixture documents are *not* required to represent all properties
-    appearing in actual documents, as this can get verbose. Only properties
-    which are present in fixture documents are checked.
+    Test fixture documents are *not* required to have all properties
+    appearing in actual documents, as this can get pretty verbose.
+    Only properties which are present in fixture documents are compared.
 
 Schemas
 *******
@@ -274,7 +284,48 @@ collapsing a torrent of ingested documents into a trickle.
 Projections
 ***********
 
-Projections relate columns to JSON hierarchy.
+Flow documents are arbitrary JSON, and may contain multiple levels of hierarchy and nesting.
+However, systems that Flow integrates with often model flattened tables with rows and
+columns, but no nesting. Others are somewhere in-between.
+
+A collection's **projections** are the means by which Flow translates between collection
+JSON documents, and a corresponding table representation. A projection defines a mapping
+between a structured document location (as a `JSON-Pointer`_) and a corresponding column
+name (a "field") in, e.g., a CSV file or SQL table.
+
+Many projections are inferred automatically from a collection's JSON Schema, using a field
+which is simply the JSON-Pointer with its leading slash removed. For example, a schema
+scalar with pointer ``/myScalar`` will generate a projection with field ``myScalar``.
+
+Users can supplement by providing additional collection projections,
+and a given document pointer can have more than one projection that references it.
+Projections are also how logical partitions of a collection are declared.
+
+Some examples:
+
+.. code-block:: yaml
+
+    collections:
+    - name: my/collection/of/web/sessions
+        schema: web-session.schema.yaml
+        key: [/user/id, /timestamp]
+        projections:
+            # A "user/id" projection field is automatically inferred.
+            # Add an supplemental field that doesn't have a slash.
+            user_id: /user/id
+            # Define a logical partitioning over "/country".
+            country:
+                location_ptr: /country
+                partition: true
+            # Partly decompose a nested array of requests into a handful of named projections.
+            "first request": /requests/0
+            "second request": /requests/1
+            "third request": /requests/2
+
+Ingestion
+*********
+
+What does it mean to "ingest" documents.
 
 Derivations
 ***********
@@ -312,3 +363,8 @@ Transforms
 ----------
 
 Transform all the things.
+
+Materializations
+----------------
+
+Materializations are neat.
