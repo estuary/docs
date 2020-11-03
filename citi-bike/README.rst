@@ -12,9 +12,43 @@ Modeling Rides
 --------------
 
 Every Flow collection has an associated `JSON Schema`_ which describes its
-documents. Let's begin with a schema for modeling Citi Bike rides:
+documents. Let's begin with an example of a ride document that we want to schematize:
 
 .. _`JSON Schema`: http://json-schema.org/understanding-json-schema/index.html
+
+.. code-block:: json
+
+   {
+   "bike_id": 26396,
+   "duration_seconds": 1193,
+   "user_type": "Customer",
+   "gender": 0,
+   "birth_year": 1969,
+   "begin": {
+      "station": {
+         "geo": {
+         "latitude": 40.711863,
+         "longitude": -73.944024
+         },
+         "id": 3081,
+         "name": "Graham Ave & Grand St"
+      },
+      "timestamp": "2020-09-01 00:00:12.2020"
+   },
+   "end": {
+      "station": {
+         "geo": {
+         "latitude": 40.68402,
+         "longitude": -73.94977
+         },
+         "id": 3048,
+         "name": "Putnam Ave & Nostrand Ave"
+      },
+      "timestamp": "2020-09-01 00:20:05.5470"
+   }
+   }
+
+Here's a JSON Schema which models Citi Bike rides:
 
 .. literalinclude:: ride.schema.yaml
    :language: yaml
@@ -30,24 +64,22 @@ It defines the *shape* that documents can take.
 *Validations* constrain the types and values that documents can take.
    A "longitude" must be a number and fall within the expected range, and "gender"
    must be a value within the expected enumeration. Some properties are ``required``,
-   while others are optional.
+   while others are optional. Flow enforces that all documents of a collection
+   must validate against its schema before they can be added.
 
-   Flow enforces that all documents of a collection must validate against its schema
-   before they may be added, so that *readers* of a collection don't have to. Flow is
-   also able to *translate* many schema constraints ("/begin/station/id must
-   exist and be an integer") into other kinds of schema -- like TypeScript types --
-   which promotes rigorous type-safety without having to re-check constraints already
-   imposed by the schema.
+   Flow is also able to *translate* many schema constraints (e.g. "/begin/station/id
+   must exist and be an integer") into other kinds of schema -- like TypeScript types
+   and SQL constraints -- which promotes end-to-end type safety and a better
+   development experience.
 
 *Annotations* attach information to locations within the document.
    Here, "title" and "description" give color to elements of the document.
    They're machine-accessible documentation -- which makes it possible to re-use
    these annotations in transformed versions of the schema.
 
-   Annotations are perhaps `JSON Schema`_'s most powerful and important feature.
-   Flow extends the JSON Schema specification with additional annotation keywords
-   such as *reduction strategies*, which detail how multiple document instances
-   can be combined together.
+   Annotations are a powerful feature of JSON Schema. Flow extends the JSON Schema
+   specification with additional annotation keywords such as *reduction strategies*,
+   which detail how multiple document instances can be combined together.
 
 Capturing Rides
 ---------------
@@ -58,11 +90,13 @@ CSV files, using header names which don't match our schema:
 
 .. code-block:: console
 
-   $ wget https://s3.amazonaws.com/tripdata/JC-202009-citibike-tripdata.csv.zip
-   $ unzip -p JC-202009-citibike-tripdata.csv.zip | head -3
+   $ wget https://s3.amazonaws.com/tripdata/202009-citibike-tripdata.csv.zip
+   $ unzip -p 202009-citibike-tripdata.csv.zip  | head -5
    "tripduration","starttime","stoptime","start station id","start station name","start station latitude","start station longitude","end station id","end station name","end station latitude","end station longitude","bikeid","usertype","birth year","gender"
-   222,"2020-09-01 00:15:58.6470","2020-09-01 00:19:40.8750",3186,"Grove St PATH",40.71958611647166,-74.04311746358871,3276,"Marin Light Rail",40.71458403535893,-74.04281705617905,45656,"Subscriber",1992,1
-   193,"2020-09-01 00:49:00.7370","2020-09-01 00:52:14.3640",3640,"Journal Square",40.73367,-74.0625,3206,"Hilltop",40.7311689,-74.0575736,45352,"Subscriber",1991,1
+   4225,"2020-09-01 00:00:01.0430","2020-09-01 01:10:26.6350",3508,"St Nicholas Ave & Manhattan Ave",40.809725,-73.953149,116,"W 17 St & 8 Ave",40.74177603,-74.00149746,44317,"Customer",1979,1
+   1868,"2020-09-01 00:00:04.8320","2020-09-01 00:31:13.7650",3621,"27 Ave & 9 St",40.7739825,-73.9309134,3094,"Graham Ave & Withers St",40.7169811,-73.94485918,37793,"Customer",1991,1
+   1097,"2020-09-01 00:00:06.8990","2020-09-01 00:18:24.2260",3492,"E 118 St & Park Ave",40.8005385,-73.9419949,3959,"Edgecombe Ave & W 145 St",40.823498,-73.94386,41438,"Subscriber",1984,1
+   1473,"2020-09-01 00:00:07.7440","2020-09-01 00:24:41.1800",3946,"St Nicholas Ave & W 137 St",40.818477,-73.947568,4002,"W 144 St & Adam Clayton Powell Blvd",40.820877,-73.939249,35860,"Customer",1990,2
 
 *Projections* let us account for this, by defining a mapping between structured
 document locations (as `JSON Pointers`_) and corresponding names ("fields")
@@ -83,8 +117,8 @@ document:
    $ flowctl develop
 
    # Pipe CSV rows into Flow's CSV WebSocket ingestion API:
-   $ unzip -p JC-202009-citibike-tripdata.csv.zip \
-      | pv --line-mode --quiet --rate-limit 100 \
+   $ unzip -p 202009-citibike-tripdata.csv.zip \
+      | pv --line-mode --quiet --rate-limit 500 \
       | websocat --protocol csv/v1 ws://localhost:8081/ingest/examples/citi-bike/rides
    {"Offsets":{"examples/citi-bike/rides/pivot=00":1416},"Processed":3}
    {"Offsets":{"examples/citi-bike/rides/pivot=00":473577},"Processed":1033}
@@ -96,8 +130,8 @@ document:
    and POSTs of JSON over HTTP. More are planned, such as Database, Kenesis,
    and Kafka integrations.
 
-Last-Seen Station by Bike
---------------------------
+Last-Seen Station of a Bike
+---------------------------
 
 We'll declare and test a collection that derives, for each bike, the station it last arrived at:
 
@@ -110,36 +144,94 @@ We can materialize the collection into a database table:
 
    $ flowctl materialize --collection examples/citi-bike/last-seen --table-name last_seen --target testDB
 
-   $ psql postgres://flow:flow@localhost:5432 -c 'select bike_id, "last/station/name", "last/timestamp" from last_seen limit 5;'
+If you're in VSCode, you can query the attached database using the "SQLTools"
+icon on the left bar. Or, use ``psql``:
+
+.. code-block:: SQL
+
+   select bike_id, "last/station/name", "last/timestamp" from last_seen limit 10;
 
 Materialization tables always use the collection's key, and are update continuously to reflect ongoing changes of the collection.
 
 Bike Relocations
 ----------------
 
-Bikes are moved in the Citi Bike system, but only show up as "holes" in the data
+Citi Bike will sometimes redistribute bikes between stations, when a station gets
+too full or empty. These relocations show up as "holes" in the ride data,
 where a bike mysteriously ends a ride at one station and starts its next ride at
-another station. Use registers to turn these into explicit "relocation" events:
+a different station.
 
-.. literalinclude:: relocations.flow.yaml
+We can use Registers to enrich rides with explicit, interleaved "relocation" events:
+
+.. literalinclude:: rides-and-relocations.flow.yaml
    :language: yaml
 
 We can use ``gazctl`` to observe relocation events, as they're derived:
 
 .. code-block:: console
 
-   $ gazctl journals read --block -l prefix=examples/citi-bike/relocations/ | jq -c '.'
+   $ gazctl journals read --block -l estuary.dev/collection=examples/citi-bike/rides-and-relocations \
+      | jq -c '. | select(.relocation)'
 
 Station Status
 --------------
 
+Suppose we're building a station status API. We're bringing together some basic statistics
+about each station, like the number of bikes which have arrived, departed, and been relocated
+in or out. We also need to know which bikes are currently at each station.
+
+To accomplish this, we'll build a collection keyed on station IDs into which we'll derive
+documents that update our station status. However, we need to tell Flow how to *reduce*
+these updates into a full view of a station's status, by adding ``reduce`` annotations
+into our schema. Here's the complete schema for our station status collection:
+
 .. literalinclude:: station.schema.yaml
    :language: yaml
 
+Flow uses reduce annotations to build general "combiners" (in the map/reduce sense) over
+documents of a given schema. Those combiners are employed automatically by Flow.
+
+Now we define our derivation. Since Flow is handling reductions for us, our remaining
+responsibility is to implement the "mapper" function which will transform source
+events into status status updates:
 
 .. literalinclude:: stations.flow.yaml
    :language: yaml
 
+Now we can materialize the collection into a PostgreSQL table, and have a live view into stations:
+
 .. code-block:: console
 
    $ flowctl materialize --collection examples/citi-bike/stations --table-name stations --target testDB
+
+.. code-block:: SQL
+
+   -- Current bikes at each station.
+   select id, name, stable from stations order by name asc limit 10;
+   -- Station arrivals and departures.
+   select id, name, "arrival/ride", "departure/ride", "arrival/move", "departure/move"
+      from stations order by name asc limit 10;
+
+Idle Bikes
+----------
+
+We're next tasked with identifying when bikes have sat idle at a station for an extended
+period of time. This is a potential signal that something is wrong with the bike,
+and customers are avoiding it.
+
+Event-driven systems usually aren't terribly good at detecting when things *haven't*
+happened. At this point, an engineer will often reach for a task scheduler like Airflow,
+and set up a job that makes and compares periodic snapshots of bike locations to find
+those that haven't changed.
+
+Flow offers a simpler approach, which is to join the rides collection with itself,
+using a *read delay*:
+
+.. literalinclude:: idle-bikes.flow.yaml
+   :language: yaml
+
+After the read delay has elapsed, we'll start to see events in the "idle-bikes" collection:
+
+.. code-block:: console
+
+   $ gazctl journals read --block -l estuary.dev/collection=examples/citi-bike/idle-bikes

@@ -1,5 +1,6 @@
 import:
   - rides.flow.yaml
   - last-seen.flow.yaml
-  - relocations.flow.yaml
+  - rides-and-relocations.flow.yaml
   - stations.flow.yaml
+  - idle-bikes.flow.yaml

@@ -7,7 +7,7 @@ collections:
   - name: examples/citi-bike/last-seen
     # The schema is represented "inline", instead of using a relative URL.
     # This is handy for simple or one-off schemas, but it cannot be referenced
-    # and re-used elsewhere.
+    # and reused elsewhere.
     schema:
       type: object
       properties:

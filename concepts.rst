@@ -133,8 +133,8 @@ another collection.
 Derived collections may also reference collections defined in other catalog sources,
 but are required to first import them (directly or indirectly).
 
-materializationTargets
-----------------------
+**materializationTargets** section
+----------------------------------
 
 ``materializationTargets`` define short, accessible names for target systems --
 like SQL databases -- that can be materialized into.
@@ -142,8 +142,8 @@ like SQL databases -- that can be materialized into.
 They encapsulate connection details and configuration of systems behind a
 memorable, authoritative name. See Materializations_ for more.
 
-tests
------
+**tests** section
+-----------------
 
 Flow catalogs can also define functional *contract tests* which verify the
 integrated end-to-end behaviors of one or more collections. You'll see
@@ -286,19 +286,19 @@ Projections
 
 Flow documents are arbitrary JSON, and may contain multiple levels of hierarchy and nesting.
 However, systems that Flow integrates with often model flattened tables with rows and
-columns, but no nesting. Others are somewhere in-between.
+columns, but no nesting. Others are somewhere in between.
 
-A collection's **projections** are the means by which Flow translates between collection
-JSON documents, and a corresponding table representation. A projection defines a mapping
-between a structured document location (as a `JSON-Pointer`_) and a corresponding column
-name (a "field") in, e.g., a CSV file or SQL table.
+**Projections** are the means by which Flow translates between the JSON documents of a
+collection, and a table representation. A projection defines a mapping between a structured
+document location (as a `JSON-Pointer`_) and a corresponding column name (a "field") in,
+e.g., a CSV file or SQL table.
 
 Many projections are inferred automatically from a collection's JSON Schema, using a field
 which is simply the JSON-Pointer with its leading slash removed. For example, a schema
 scalar with pointer ``/myScalar`` will generate a projection with field ``myScalar``.
 
-Users can supplement by providing additional collection projections,
-and a given document pointer can have more than one projection that references it.
+Users can supplement by providing additional collection projections, and a document location
+can have more than one projection field that references it.
 Projections are also how logical partitions of a collection are declared.
 
 Some examples:
@@ -325,7 +325,13 @@ Some examples:
 Ingestion
 *********
 
-What does it mean to "ingest" documents.
+Talk about What does it mean to "ingest" documents.
+
+Transactions
+------------
+
+Talk about multi-collection transactions.
+
 
 Derivations
 ***********
