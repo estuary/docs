@@ -38,7 +38,8 @@ This documentation is interactive! You can directly open it on GitHub using
 Codespaces_, or you can clone this repo and open using the `VSCode Remote Containers`_
 extension. Both options will spin up an environment with the Flow CLI tools,
 add-ons for VSCode editor support, and an attached PostgreSQL database for
-trying out materializations.
+trying out materializations. See :doc:`getting started vscode <docs/getting-started-vscode>` 
+for a step-by-step walkthrough.
 
 .. _Codespaces: https://github.com/features/codespaces
 .. _`VSCode Remote Containers`: https://code.visualstudio.com/docs/remote/containers
@@ -68,5 +69,6 @@ Table of Contents
    :caption: Overview
 
    Concepts <concepts>
+   Getting Started with VS Code <docs/getting-started-vscode>
    Reductions <reductions/README>
    Example: Citi Bike <citi-bike/README>
