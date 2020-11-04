@@ -1,0 +1,36 @@
+type: object
+properties:
+  Origin:
+    type: string
+    description: "Three letter airport code of the origin airport"
+  Destination:
+    type: string
+    description: "Three letter airport code of the destination airport"
+  OriginCity:
+    type: string
+    description: "Origin city name"
+  DestinationCity:
+    type: string
+    description: "Destination city name"
+  Passengers:
+    type: integer
+    description: "Number of passengers transported from origin to destination"
+  Seats:
+    type: integer
+    description: "Number of seats available on flights from origin to destination"
+  Flights:
+    type: integer
+    description: "Number of flights between origin and destination (multiple records for one month, many with flights > 1)"
+  Distance:
+    type: integer
+    description: "Integer	Distance (to nearest mile) flown between origin and destination"
+  FlyDate:
+    type: integer
+    description: "The date (yyyymm) of flight"
+  OriginPopulation:
+    type: integer
+    description: "Origin city's population as reported by US Census"
+  DestinationPopulation:
+    type: integer
+    description: "Destination city's population as reported by US Census"
+required: [FlyDate, Origin, Destination, OriginCity, DestinationCity]

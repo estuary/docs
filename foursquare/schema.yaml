@@ -1,0 +1,91 @@
+$defs:
+  userId:
+    type: integer
+    description: "The persons user ID in the Foursquare system.  This ID has been anonymized"
+
+  venueId:
+    type: integer
+    description: "The venue's ID in the Foursquare system"
+
+  latitude:
+    type: [number, "null"]
+    minimum: -90
+    maximum: 90
+
+  longitude:
+    type: [number, "null"]
+    minimum: -180
+    maximum: 180
+
+  checkins:
+    description: "Foursquare Check-ins"
+    type: object
+    properties:
+      id:
+        type: integer
+        description: "Unique ID of the specific check in"
+      user_id:
+        $ref: "#/$defs/userId"
+      venue_id:
+        $ref: "#/$defs/venueId"
+      latitude:
+        $ref: "#/$defs/latitude"
+        description: "The latitude of the check in"
+      longitude:
+        $ref: "#/$defs/longitude"
+        description: "The longitude of the check in"
+      created_at:
+        description: "Timestamp of the check in as YYYY-MM-DD HH:MM:SS in UTC"
+        type: string
+        pattern: "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
+    required: [id, user_id, venue_id]
+
+  users:
+    description: "A subset of Foursquare users"
+    type: object
+    properties:
+      id:
+        $ref: "#/$defs/userId"
+      latitude:
+        $ref: "#/$defs/latitude"
+        description: "The Latitude of the users hometown"
+      longitude:
+        $ref: "#/$defs/longitude"
+        description: "The Longitude of the users hometown"
+    required: [id, latitude, longitude]
+
+  socialGraph:
+    description: "Users friend relationships on Foursquare"
+    type: object
+    properties:
+      first_user_id:
+        $ref: "#/$defs/userId"
+      second_user_id:
+        $ref: "#/$defs/userId"
+    required: [first_user_id, second_user_id]
+
+  ratings:
+    description: "Users ratings of venues on Foursquare"
+    type: object
+    properties:
+      user_id:
+        $ref: "#/$defs/userId"
+      venue_id:
+        $ref: "#/$defs/venueId"
+      rating:
+        type: integer
+        minimum: 0
+        maximum: 5
+    required: [user_id, venue_id]
+
+  venues:
+    description: "Venues and their locations on Foursquare"
+    type: object
+    properties:
+      id:
+        $ref: "#/$defs/venueId"
+      latitude:
+        $ref: "#/$defs/latitude"
+      longitude:
+        $ref: "#/$defs/longitude"
+    required: [id, latitude, longitude]

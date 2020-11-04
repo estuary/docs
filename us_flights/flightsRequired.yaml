@@ -1,0 +1,2 @@
+$ref: schema.yaml
+required: [FlyDate, Origin, Destination]

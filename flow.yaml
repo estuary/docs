@@ -1,6 +1,8 @@
 import:
-  - citi-bike/flow.yaml
-  - reductions/flow.yaml
+  - youtube/flow.yaml
+  - us_flights/flow.yaml
+  - new_example/flow.yaml
+  - foursquare/location.flow.yaml
 
 materializationTargets:
   # When this repository is run as a VSCode devcontainer, it composes a PostgreSQL

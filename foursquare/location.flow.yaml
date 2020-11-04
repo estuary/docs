@@ -1,0 +1,344 @@
+import:
+  - avg_ratings.flow.yaml
+
+# Derive stats around the distance from home users go for venues.
+# Start by connecting user ID and venue ID with the users home location.
+
+collections:
+  - name: foursquare/user/homeLocationToVenue
+    key: [/user_id, /venue_id]
+    schema:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        venue_id:
+          type: integer
+        home_latitude:
+          $ref: "schema.yaml#/$defs/latitude"
+        home_longitude:
+          $ref: "schema.yaml#/$defs/longitude"
+        created_at:
+          description: "Timestamp of the check in as YYYY-MM-DD HH:MM:SS in UTC"
+          type: string
+          pattern: "\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"
+      required: [user_id, venue_id]
+      reduce: { strategy: merge }
+    derivation:
+      register:
+        initial: { home_latitude: 2, home_longitude: 3 }
+        schema:
+          type: object
+          properties:
+            home_latitude:
+              $ref: "schema.yaml#/$defs/latitude"
+            home_longitude:
+              $ref: "schema.yaml#/$defs/longitude"
+      transform:
+        userLocation:
+          source:
+            name: foursquare/users
+          # Create a register that decorates checkin data with the users home town location.
+          update:
+            nodeJS: |
+              return [{home_latitude: source.latitude, home_longitude: source.longitude}]
+        checkinToUserLocation:
+          source:
+            name: foursquare/checkins
+          shuffle:
+            - /user_id
+          # Output our derived location.
+          publish:
+            nodeJS: |
+              return [{user_id: source.user_id, venue_id: source.venue_id, home_latitude: register.home_latitude, home_longitude: register.home_longitude, created_at: source.created_at}];
+
+  # Derive a second collection of average rating to venue location using our imported average venue rating.
+  - name: foursquare/venue/locationAndRating
+    key: [/venue_id]
+    schema:
+      type: object
+      properties:
+        venue_id:
+          type: integer
+        avg_rating:
+          type: number
+        latitude:
+          $ref: "schema.yaml#/$defs/latitude"
+        longitude:
+          $ref: "schema.yaml#/$defs/longitude"
+      required: [venue_id]
+    derivation:
+      register:
+        initial: { venue_latitude: 46.7866719, venue_longitude: -73.5965186 }
+        schema:
+          type: object
+          properties:
+            venue_latitude:
+              $ref: "schema.yaml#/$defs/latitude"
+            venue_longitude:
+              $ref: "schema.yaml#/$defs/longitude"
+      transform:
+        addVenueLocation:
+          source:
+            name: foursquare/venues
+          # Our register will be the venues location.
+          update:
+            nodeJS: |
+              return [{venue_latitude: source.latitude, venue_longitude: source.longitude}];
+        addAvgRating:
+          source:
+            name: foursquare/venue/avgRating
+          # Add venue location to the average rating table.
+          publish:
+            nodeJS: |
+              let rate = 0;
+              if (source.total_score && source.num_ratings){
+                  rate = source.total_score / source.num_ratings;
+              }
+              return[{venue_id: source.venue_id, avg_rating: rate, latitude: register.venue_latitude, longitude: register.venue_longitude}]
+
+  # Derive location stats about relative distances a user travels for venues and their ratings.
+  - name: foursquare/user/locationStats
+    key: [/user_id]
+    schema:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        # Total venues, we don't care if they're distinct for any of these
+        num_venues:
+          type: integer
+          reduce: { strategy: sum }
+        # Numerator of the average total distance from home a user travels when not traveling.
+        home_venue_total_distance:
+          type: number
+          reduce: { strategy: sum }
+        # Numerator of the average total rating venues the user goes to have when not traveling.
+        home_venue_total_rating:
+          type: number
+          reduce: { strategy: sum }
+        # Denominator when the user is at home.
+        home_venue_count:
+          type: integer
+          reduce: { strategy: sum }
+        # Below here is the same as above when the user is traveling.
+        away_venue_total_distance:
+          type: number
+          reduce: { strategy: sum }
+        away_venue_total_rating:
+          type: number
+          reduce: { strategy: sum }
+        away_venue_count:
+          type: integer
+          reduce: { strategy: sum }
+      required: [user_id]
+      reduce: { strategy: merge }
+    derivation:
+      # Venue ID is our common ID and will be used as the shuffle key for the register.
+      register:
+        initial:
+          {
+            venue_latitude: 46.7866719,
+            venue_longitude: -73.5965186,
+            avg_rating: 2,
+          }
+        schema:
+          type: object
+          properties:
+            venue_latitude:
+              $ref: "schema.yaml#/$defs/latitude"
+            venue_longitude:
+              $ref: "schema.yaml#/$defs/longitude"
+            avg_rating:
+              type: number
+      transform:
+        addVenueLocation:
+          source:
+            # Venue location and rating uses the primary key of venue ID so we don't need to specify it.
+            name: foursquare/venue/locationAndRating
+          update:
+            nodeJS: |
+              return [{venue_latitude: source.latitude, venue_longitude: source.longitude, avg_rating: source.avg_rating}];
+        deriveLocationStats:
+          source:
+            name: foursquare/user/homeLocationToVenue
+          # Join this to our venue ID from the home location to venue derived collection.
+          shuffle:
+            - /venue_id
+          publish:
+            # A lot is happening below.  First, we're using javascript math function to calculate the distance between
+            # two points on the earth.  We then compare that distance to a set value of 50.  When the distance is above
+            # that value, we consider the user to be traveling and track it separately.  When it's below that value, we
+            # consider the user to be at home.  We add all this information to the avg rating and track it on a per user
+            # basis.  Finally we'll round our location value to 2 decimal places at max.
+            nodeJS: |
+              let dist = 0;
+              if ((register.venue_latitude == source.home_latitude) && (register.venue_longitude == source.home_longitude)){
+                dist = 0;
+              } else if (!(register.venue_latitude) || !(source.home_latitude) || !(register.venue_longitude) || !(source.home_longitude)){
+                dist = 0;
+              }
+              else { 
+                let radlat1 = Math.PI * source.home_latitude/180;
+                let radlat2 = Math.PI * register.venue_latitude/180;
+                let theta = source.home_longitude - register.venue_longitude;
+                let radtheta = Math.PI * theta / 180;
+                dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+                if (dist > 1) {
+                  dist = 1;
+                }
+                dist = Math.acos(dist);
+                dist = dist * 180 / Math.PI;
+                dist = Math.round((dist * 60*1.1515) * 100) / 100;
+              }
+
+              let home = 0;
+              let away = 0;
+              let homedist = 0;
+              let awaydist = 0;
+              let homerate = 0;
+              let awayrate = 0;
+              let rating = 0;
+              if (register.avg_rating){rating = register.avg_rating;}
+
+
+              if (dist > 50){
+                away = 1;
+                awaydist = dist;
+                awayrate = rating;
+              } else if ((dist > 0) && (dist <50) ) {
+                home = 1;
+                homedist = dist;
+                homerate = rating;
+              } 
+
+              return [{user_id: source.user_id, num_venues: 1, home_venue_total_distance: homedist, home_venue_count: home, home_venue_total_rating: homerate, away_venue_total_distance: awaydist, away_venue_count: away, away_venue_total_rating: awayrate}]
+
+tests:
+  # Verify the shape of our first derived collection.
+  homeVenueLocationChecks:
+    - ingest:
+        collection: foursquare/users
+        documents:
+          - { id: 1, latitude: 45.5405832, longitude: -73.5965186 }
+          - { id: 2, latitude: 46.7866719, longitude: -92.1004852 }
+    - ingest:
+        collection: foursquare/checkins
+        documents:
+          - &checkin1 {
+              id: 1,
+              user_id: 1,
+              venue_id: 2,
+              created_at: "2012-04-21 17:42:58",
+            }
+          - &checkin2 {
+              id: 2,
+              user_id: 1,
+              venue_id: 3,
+              created_at: "2012-04-25 17:42:58",
+            }
+          - &checkin3 {
+              id: 3,
+              user_id: 2,
+              venue_id: 3,
+              created_at: "2012-04-26 17:42:58",
+            }
+    - verify:
+        collection: foursquare/user/homeLocationToVenue
+        documents:
+          - {
+              user_id: 1,
+              venue_id: 2,
+              home_latitude: 45.5405832,
+              home_longitude: -73.5965186,
+            }
+          - {
+              user_id: 1,
+              venue_id: 3,
+              home_latitude: 45.5405832,
+              home_longitude: -73.5965186,
+            }
+          - {
+              user_id: 2,
+              venue_id: 3,
+              home_latitude: 46.7866719,
+              home_longitude: -92.1004852,
+            }
+
+  # Verify the second derived collection.
+  venueLocationRating:
+    - ingest:
+        collection: foursquare/venues
+        documents:
+          - { id: 2, latitude: 45.5405832, longitude: -73.5965186 }
+          - { id: 3, latitude: -7.9756648, longitude: 112.631746 }
+    - ingest:
+        collection: foursquare/ratings
+        documents:
+          - &review1 { "user_id": 1, "venue_id": 2, "rating": 5 }
+          - &review2 { "user_id": 2, "venue_id": 2, "rating": 4 }
+          - &review3 { "user_id": 3, "venue_id": 3, "rating": 2 }
+    - verify:
+        collection: foursquare/venue/locationAndRating
+        documents:
+          - {
+              venue_id: 2,
+              avg_rating: 4.5,
+              latitude: 45.5405832,
+              longitude: -73.5965186,
+            }
+          - {
+              venue_id: 3,
+              avg_rating: 2,
+              latitude: -7.9756648,
+              longitude: 112.631746,
+            }
+
+  # Ensure our location stats are coming out correct.
+  verifyLocationStats:
+    - ingest:
+        collection: foursquare/venues
+        documents:
+          - { id: 2, latitude: 45.5405832, longitude: -73.5965186 }
+          - { id: 3, latitude: -7.9756648, longitude: 112.631746 }
+    - ingest:
+        collection: foursquare/ratings
+        documents:
+          - &review1 { "user_id": 1, "venue_id": 2, "rating": 5 }
+          - &review2 { "user_id": 2, "venue_id": 2, "rating": 4 }
+          - &review3 { "user_id": 3, "venue_id": 3, "rating": 2 }
+    - ingest:
+        collection: foursquare/users
+        documents:
+          - { id: 1, latitude: 45.5405834, longitude: -73.6965186 }
+          - { id: 2, latitude: 45.7866719, longitude: -73.1004852 }
+    - ingest:
+        collection: foursquare/checkins
+        documents:
+          - *checkin1
+          - *checkin2
+          - *checkin3
+
+    - verify:
+        collection: foursquare/user/locationStats
+        documents:
+          - {
+              user_id: 1,
+              num_venues: 2,
+              home_venue_total_distance: 4.84,
+              home_venue_total_rating: 4.5,
+              home_venue_count: 1,
+              away_venue_total_distance: 9813.52,
+              away_venue_total_rating: 2,
+              away_venue_count: 1,
+            }
+          - {
+              user_id: 2,
+              num_venues: 1,
+              home_venue_total_distance: 0,
+              home_venue_total_rating: 0,
+              home_venue_count: 0,
+              away_venue_total_distance: 9801.62,
+              away_venue_total_rating: 2,
+              away_venue_count: 1,
+            }

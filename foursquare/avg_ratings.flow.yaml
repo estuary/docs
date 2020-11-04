@@ -1,0 +1,151 @@
+collections:
+  - name: foursquare/ratings
+    schema: schema.yaml#/$defs/ratings
+    key: [/user_id, /venue_id]
+
+  - name: foursquare/users
+    schema: schema.yaml#/$defs/users
+    key: [/id]
+
+  - name: foursquare/checkins
+    schema: schema.yaml#/$defs/checkins
+    key: [/id]
+
+  - name: foursquare/socialGraph
+    schema: schema.yaml#/$defs/socialGraph
+    key: [/first_user_id, /second_user_id]
+
+  - name: foursquare/venues
+    schema: schema.yaml#/$defs/venues
+    key: [/id]
+
+  #Derive the average venue rating for each venue
+  - name: foursquare/venue/avgRating
+    key: [/venue_id]
+    schema:
+      type: object
+      properties:
+        venue_id:
+          type: integer
+        #The numerator of the average rating
+        total_score:
+          type: number
+          reduce: { strategy: sum }
+        #The number of ratings which is the denominator of the average rating
+        num_ratings:
+          type: integer
+          reduce: { strategy: sum }
+      required: [venue_id]
+      reduce: { strategy: merge }
+    derivation:
+      transform:
+        averageVenueRating:
+          source:
+            name: foursquare/ratings
+          publish:
+            nodeJS: |
+              return [{venue_id: source.venue_id, total_score: source.rating, num_ratings: 1}];
+
+  # Derive the users with the best taste as of the current rating for the venue
+  # We're going to do this by deriving the average total score for all venues a user has been to as the numerator
+  # and the total number of venues that user has been to for the numerator.
+
+  - name: foursquare/user/withBestTaste
+    key: [/user_id]
+    schema:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        num_venues:
+          type: integer
+          reduce: { strategy: sum }
+        current_avg_rating:
+          type: number
+          reduce: { strategy: sum }
+      reduce: { strategy: merge }
+      required: [user_id]
+    derivation:
+      # Create a register which keeps a tally of all the user ID's and venue ID's for every check in
+      register:
+        initial: { "venue_id": 2, "num_ratings": 2, "c_avg_rating": 6 }
+        schema:
+          type: object
+          properties:
+            venue_id:
+              type: integer
+            num_ratings:
+              type: integer
+            c_avg_rating:
+              type: number
+          required: [venue_id]
+      transform:
+        avgVenueRatings:
+          source:
+            name: foursquare/venue/avgRating
+          # Publish the user ID, average rating and number of venues that the user has been to.
+          # Each record will only be one venue, hence that value will be one.
+          update:
+            nodeJS: |
+              let venues_avg_rating = 0;
+              if (source.total_score && source.num_ratings){
+                venues_avg_rating = source.total_score / source.num_ratings;}
+              return [{venue_id: source.venue_id, c_avg_rating: venues_avg_rating}];
+        deriveBestTaste:
+          source:
+            name: foursquare/checkins
+          shuffle:
+            - /venue_id
+          publish:
+            nodeJS: |
+              return [{user_id: source.user_id, num_venues: 1, current_avg_rating: register.c_avg_rating}];
+
+tests:
+  # Ensure that average ratings are calculated correctly given input documents.
+  confirmAverageRatings:
+    - ingest:
+        collection: foursquare/ratings
+        documents:
+          - &review1 { "user_id": 1, "venue_id": 2, "rating": 5 }
+          - &review2 { "user_id": 2, "venue_id": 2, "rating": 4 }
+          - &review3 { "user_id": 3, "venue_id": 3, "rating": 2 }
+    - verify:
+        collection: foursquare/venue/avgRating
+        documents:
+          - { "venue_id": 2, "total_score": 9, "num_ratings": 2 }
+          - { "venue_id": 3, "total_score": 2, "num_ratings": 1 }
+
+  # Test our collection of users correlated to the average rating of venues that they go to.
+  confirmBestTaste:
+    - ingest:
+        collection: foursquare/ratings
+        documents:
+          - *review1
+          - *review2
+          - *review3
+    - ingest:
+        collection: foursquare/checkins
+        documents:
+          - &checkin1 {
+              id: 1,
+              user_id: 1,
+              venue_id: 2,
+              created_at: "2012-04-21 17:42:58",
+            }
+          - &checkin2 {
+              id: 2,
+              user_id: 1,
+              venue_id: 3,
+              created_at: "2012-04-25 17:42:58",
+            }
+          - &checkin3 {
+              id: 3,
+              user_id: 2,
+              venue_id: 3,
+              created_at: "2012-04-26 17:42:58",
+            }
+    - verify:
+        collection: foursquare/user/withBestTaste
+        documents:
+          - { user_id: 1, num_venues: 2, current_avg_rating: 6.5 }
+          - { user_id: 2, num_venues: 1, current_avg_rating: 2 }

@@ -1,0 +1,36 @@
+type: object
+properties:
+  videoID:
+    type: string
+    description: "an 11-digit string, which is unique"
+  userID:
+    type: string
+    description: "a string of the video users username"
+  age:
+    type: integer
+    description: "an integer number of days between the date when the video was uploaded and Feb.15, 2007 (YouTube's establishment)"
+  category:
+    type: string
+    description: "a string of the video category chosen by the uploader"
+  length:
+    type: integer
+    description: "an integer number of the video length"
+  views:
+    type: integer
+    description: "an integer number of the views"
+  rate:
+    type: number
+    description: "a float number of the video rate"
+  ratings:
+    type: integer
+    description: "an integer number of the ratings"
+  comments:
+    type: integer
+    description: "an integer number of the comments"
+  crawlDate:
+    type: integer
+    description: "the date formatted MMDDYYYY"
+  relatedIDs:
+    type: array
+    description: "up to 20 strings of the related video IDs"
+required: [videoID, userID, crawlDate]

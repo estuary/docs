@@ -1,0 +1,371 @@
+collections:
+  - name: us_flights
+    key: [/OriginCity, /DestinationCity, /FlyDate]
+    schema: schema.yaml
+
+  - name: airports
+    key: [/iata_code]
+    schema: airports.schema.yaml
+
+  - name: fill/origin/year
+    key: [/OriginCity]
+    schema:
+      type: object
+      properties:
+        OriginCity:
+          type: string
+          description: "City of origin"
+        Passengers:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Number of passengers transported from origin"
+        Seats:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Number of seats available on flights from origin"
+        Flights:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Number of flights originating at the origin"
+        Distance:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Integer	Distance (to nearest mile) flown from origin"
+        FlyYear:
+          type: integer
+          description: "The date (yyyy) of flight"
+        OriginPopulation:
+          type: integer
+          description: "Origin city's population as reported by US Census"
+      reduce: { strategy: merge }
+      required: [OriginCity]
+    derivation:
+      transform:
+        nameOfTransform:
+          source:
+            name: us_flights
+            schema:
+              $ref: flightsRequired.yaml
+          publish:
+            nodeJS: |
+              return [{
+                OriginCity: source.OriginCity, 
+                Passengers: source.Passengers,
+                Seats: source.Seats,
+                Flights: source.Flights,
+                Distance: source.Distance,
+                FlyYear: Math.floor(source.FlyDate / 1e2),
+                OriginPopulation: source.OriginPopulation
+              }];
+
+  - name: fill/state/year
+    key: [/OriginState, /DestinationState]
+    schema:
+      type: object
+      properties:
+        OriginState:
+          type: string
+          description: "State of origin"
+        DestinationState:
+          type: string
+          description: "Destination state"
+        Passengers:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Number of passengers transported from origin"
+        Flights:
+          type: integer
+          reduce: { strategy: sum }
+          description: "Number of flights originating at the origin"
+        FlyYear:
+          type: integer
+          description: "The date (yyyy) of flight"
+        OriginPopulation:
+          type: integer
+          description: "Origin city's population as reported by US Census"
+        DestinationPopulation:
+          type: integer
+          description: "Destination city's population as reported by US Census"
+      reduce: { strategy: merge }
+      required: [DestinationState, OriginState]
+    derivation:
+      transform:
+        nameOfTransform:
+          source:
+            name: us_flights
+            schema:
+              $ref: flightsRequired.yaml
+          publish:
+            nodeJS: |
+              let d = source.FlyDate || 0;
+              let org = source.OriginCity || "";
+              let des = source.DestinationCity || "";
+              return [{
+                OriginState: org.slice(-2),
+                DestinationState: des.slice(-2), 
+                Passengers: source.Passengers,
+                Flights: source.Flights,
+                FlyYear: Math.floor(d / 1e2),
+                OriginPopulation: source.OriginPopulation,
+                DestinationPopulation: source.DestinationPopulation
+              }];
+
+  - name: elevation/airport/year
+    key: [/Origin, /Destination]
+    schema:
+      type: object
+      properties:
+        Origin:
+          type: string
+          description: "IATA of origin"
+        Destination:
+          type: string
+        OriginElevation:
+          type: integer
+        DestinationElevation:
+          type: integer
+        FlyYear:
+          type: integer
+          description: "The date (yyyy) of flight"
+        Count:
+          type: integer
+          description: "The number of flights"
+          reduce: { strategy: sum }
+      required: [Origin, Destination]
+      reduce: { strategy: merge }
+    derivation:
+      register:
+        initial:
+          {
+            "ident": "07FA",
+            "type": "small_airport",
+            "name": "Ocean Reef Club Airport",
+            "elevation_ft": 8,
+            "continent": "NA",
+            "iso_country": "US",
+            "iso_region": "US-FL",
+            "municipality": "Key Largo",
+            "gps_code": "07FA",
+            "iata_code": "OCA",
+            "local_code": "07FA",
+            "coordinates": "-80.274803161621, 25.325399398804",
+          }
+        schema: airports.schema.yaml
+      transform:
+        Airports:
+          source:
+            name: airports
+          update:
+            nodeJS: return [source];
+        EnrichedWithOriginElevation:
+          source:
+            name: us_flights
+          shuffle:
+            - /Origin
+          publish:
+            nodeJS: |
+              let d = source.FlyDate || 0;
+              return [{
+                Origin: source.Origin,
+                Destination: source.Destination, 
+                OriginElevation: register.elevation_ft,
+                FlyYear: Math.floor(d / 1e2),
+                Count: source.Flights
+              }];
+        EnrichedWithDestinationElevation:
+          source:
+            name: us_flights
+          shuffle:
+            - /Destination
+          publish:
+            nodeJS: |
+              let d = source.FlyDate || 0;
+              return [{
+                Origin: source.Origin,
+                Destination: source.Destination, 
+                DestinationElevation: register.elevation_ft,
+                FlyYear: Math.floor(d / 1e2),
+                Count: 0
+                }];
+
+tests:
+  "mytest":
+    - ingest:
+        collection: us_flights
+        documents:
+          - {
+              Origin: "MFR",
+              Destination: "RDM",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Bend, OR",
+              Passengers: 536,
+              Seats: 869,
+              Flights: 4,
+              Distance: 156,
+              FlyDate: 200810,
+              OriginPopulation: 200298,
+              DestinationPopulation: 157730,
+            }
+          - {
+              Origin: "MFR",
+              Destination: "EKO",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Elko, NV",
+              Passengers: 124,
+              Seats: 124,
+              Flights: 1,
+              Distance: 858,
+              FlyDate: 200812,
+              OriginPopulation: 200298,
+              DestinationPopulation: 40259,
+            }
+    - verify:
+        collection: fill/origin/year
+        documents:
+          - {
+              OriginCity: "Medford, OR",
+              Passengers: 660,
+              Seats: 993,
+              Flights: 5,
+              Distance: 1014,
+              FlyYear: 2008,
+              OriginPopulation: 200298,
+            }
+
+  "test2":
+    - ingest:
+        collection: us_flights
+        documents:
+          - {
+              Origin: "MFR",
+              Destination: "RDM",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Bend, OR",
+              Passengers: 536,
+              Seats: 869,
+              Flights: 4,
+              Distance: 156,
+              FlyDate: 200810,
+              OriginPopulation: 200298,
+              DestinationPopulation: 157730,
+            }
+          - {
+              Origin: "MFR",
+              Destination: "RDM",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Bend, OR",
+              Passengers: 124,
+              Seats: 124,
+              Flights: 1,
+              Distance: 858,
+              FlyDate: 200812,
+              OriginPopulation: 200298,
+              DestinationPopulation: 157730,
+            }
+    - verify:
+        collection: fill/state/year
+        documents:
+          - {
+              OriginState: "OR",
+              DestinationState: "OR",
+              Passengers: 660,
+              Flights: 5,
+              FlyYear: 2008,
+              OriginPopulation: 200298,
+              DestinationPopulation: 157730,
+            }
+
+  "ElevationTest":
+    - ingest:
+        collection: airports
+        documents:
+          - {
+              "ident": "KMFR",
+              "type": "medium_airport",
+              "name": "Rogue Valley International Medford Airport",
+              "elevation_ft": 1335,
+              "continent": "NA",
+              "iso_country": "US",
+              "iso_region": "US-OR",
+              "municipality": "Medford",
+              "gps_code": "KMFR",
+              "iata_code": "MFR",
+              "local_code": "MFR",
+              "coordinates": "-122.87300109863281, 42.37419891357422",
+            }
+          - {
+              "ident": "KRDM",
+              "type": "medium_airport",
+              "name": "Roberts Field",
+              "elevation_ft": 3080,
+              "continent": "NA",
+              "iso_country": "US",
+              "iso_region": "US-OR",
+              "municipality": "Redmond",
+              "gps_code": "KRDM",
+              "iata_code": "RDM",
+              "local_code": "RDM",
+              "coordinates": "-121.1500015, 44.2541008",
+            }
+          - {
+              "ident": "KEKO",
+              "type": "medium_airport",
+              "name": "Elko Regional Airport",
+              "elevation_ft": 5140,
+              "continent": "NA",
+              "iso_country": "US",
+              "iso_region": "US-NV",
+              "municipality": "Elko",
+              "gps_code": "KEKO",
+              "iata_code": "EKO",
+              "local_code": "EKO",
+              "coordinates": "-115.79199981689453, 40.82490158081055",
+            }
+    - ingest:
+        collection: us_flights
+        documents:
+          - {
+              Origin: "MFR",
+              Destination: "RDM",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Bend, OR",
+              Passengers: 536,
+              Seats: 869,
+              Flights: 4,
+              Distance: 156,
+              FlyDate: 200810,
+              OriginPopulation: 200298,
+              DestinationPopulation: 157730,
+            }
+          - {
+              Origin: "MFR",
+              Destination: "EKO",
+              OriginCity: "Medford, OR",
+              DestinationCity: "Elko, NV",
+              Passengers: 124,
+              Seats: 124,
+              Flights: 1,
+              Distance: 858,
+              FlyDate: 200812,
+              OriginPopulation: 200298,
+              DestinationPopulation: 40259,
+            }
+    - verify:
+        collection: elevation/airport/year
+        documents:
+          - {
+              Origin: "MFR",
+              Destination: "EKO",
+              FlyYear: 2008,
+              OriginElevation: 1335,
+              DestinationElevation: 5140,
+              Count: 1,
+            }
+          - {
+              Origin: "MFR",
+              Destination: "RDM",
+              FlyYear: 2008,
+              OriginElevation: 1335,
+              DestinationElevation: 3080,
+              Count: 4,
+            }

@@ -1,0 +1,249 @@
+collections:
+  - name: yt_videos
+    key: [/videoID, /crawlDate]
+    schema: schema.yaml
+
+  #Flatten user recommendations to have user ID, Crawl date and recommended video for later use
+  - name: userDateRecommendedVideo
+    key: [/crawlDate, /recommendedVideoID]
+    schema:
+      type: object
+      properties:
+        crawlDate:
+          type: integer
+        recommendedVideoID:
+          type: string
+        sourceVideoViews:
+          #cumulative number of video views of source videos recommending a video
+          type: integer
+          reduce: { strategy: sum }
+        numberRecommended:
+          #distinct videos recommending a video
+          type: integer
+          reduce: { strategy: sum }
+      reduce: { strategy: merge }
+      required: [crawlDate, recommendedVideoID]
+    derivation:
+      transform:
+        flattenVideoRecommendations:
+          source:
+            name: yt_videos
+          publish:
+            nodeJS: |
+              var IDs = [];
+              let i = 0;
+              if (source.relatedIDs){
+                for (i=0; i < source.relatedIDs.length; i++){
+                  IDs.push({crawlDate: source.crawlDate, recommendedVideoID: source.relatedIDs[i], sourceVideoViews: source.views, numberRecommended: 1});
+                }
+              }
+              return IDs;
+
+  #Add User and view information of the recommended video to the collection
+  - name: recommendationsWithUser
+    key: [/userID]
+    schema:
+      type: object
+      properties:
+        userID:
+          #user that posted the recommended video
+          type: string
+        recommendedVideoID:
+          type: string
+        numberRecommended:
+          #number of videos the video has been recommended by
+          type: integer
+          reduce: { strategy: sum }
+        sourceVideoViews:
+          #total number of views that videos recommending this one have had
+          type: integer
+          reduce: { strategy: sum }
+        videoViews:
+          #views of the recommended video
+          type: integer
+          reduce: { strategy: sum }
+      reduce: { strategy: merge }
+      required: [recommendedVideoID, userID]
+    derivation:
+      register:
+        initial: { "userID": "sxephil", "views": 101384, "videoID": 132 }
+        schema:
+          type: object
+          properties:
+            userID:
+              #user that posted the recommended video
+              type: string
+            views:
+              type: integer
+            videoID:
+              type: integer
+          required: [userID]
+      transform:
+        #Create a register which provides us user ID given video ID
+        updateRegisterForUserIDs:
+          source:
+            name: yt_videos
+          shuffle:
+            - /videoID
+          update:
+            nodeJS: |
+              return [{userID: source.userID, views: source.views}];
+        #Create overall view of how often videos are recommended by user
+        getStatsOnRecommendedVideos:
+          source:
+            name: userDateRecommendedVideo
+          shuffle:
+            - /recommendedVideoID
+          publish:
+            nodeJS: |
+              return [{
+                userID: register.userID,
+                recommendedVideoID: source.recommendedVideoID, 
+                numberRecommended: source.numberRecommended,
+                sourceVideoViews: source.sourceVideoViews,
+                videoViews: register.views
+              }];
+
+tests:
+  "confirmRecommendedVideos":
+    - ingest:
+        collection: yt_videos
+        documents:
+          - {
+              "videoID": "_a0gQFOJYWM",
+              "userID": "sxephil",
+              "age": 1135,
+              "category": "Entertainment",
+              "length": 270,
+              "views": 101384,
+              "rate": 4.72,
+              "ratings": 3407,
+              "comments": 2887,
+              "crawlDate": 03282008,
+              "relatedIDs": [],
+            }
+          - {
+              "videoID": "QuRYeRnAuXM",
+              "userID": "thecomputernerd01",
+              "age": 1136,
+              "category": "Comedy",
+              "length": 216,
+              "views": 458,
+              "rate": 4.8,
+              "ratings": 133,
+              "comments": 2183,
+              "crawlDate": 03282008,
+              "relatedIDs": [],
+            }
+          - {
+              "videoID": "SfaxA9Q-9AQ",
+              "userID": "barelypolitical",
+              "age": 1134,
+              "category": "News & Politics",
+              "length": 56,
+              "views": 555203,
+              "rate": 4.7,
+              "ratings": 3574,
+              "comments": 2117,
+              "crawlDate": 03282008,
+              "relatedIDs": [],
+            }
+          - {
+              "videoID": "dh6dF1XY3uI",
+              "userID": "SouljaBoy",
+              "age": 1134,
+              "category": "News & Politics",
+              "length": 56,
+              "views": 13445,
+              "rate": 4.7,
+              "ratings": 3574,
+              "comments": 2117,
+              "crawlDate": 03282008,
+              "relatedIDs": [],
+            }
+    - ingest:
+        collection: yt_videos
+        documents:
+          - {
+              "videoID": "_a0gQFOJYWM",
+              "userID": "sxephil",
+              "age": 1135,
+              "category": "Entertainment",
+              "length": 270,
+              "views": 101384,
+              "rate": 4.72,
+              "ratings": 3407,
+              "comments": 2887,
+              "crawlDate": 03272008,
+              "relatedIDs": ["QuRYeRnAuXM", "dh6dF1XY3uI", "SfaxA9Q-9AQ"],
+            }
+          - {
+              "videoID": "QuRYeRnAuXM",
+              "userID": "thecomputernerd01",
+              "age": 1136,
+              "category": "Comedy",
+              "length": 216,
+              "views": 458,
+              "rate": 4.8,
+              "ratings": 133,
+              "comments": 2183,
+              "crawlDate": 03272008,
+              "relatedIDs": ["dh6dF1XY3uI", "_a0gQFOJYWM", "SfaxA9Q-9AQ"],
+            }
+          - {
+              "videoID": "SfaxA9Q-9AQ",
+              "userID": "barelypolitical",
+              "age": 1134,
+              "category": "News & Politics",
+              "length": 56,
+              "views": 555203,
+              "rate": 4.7,
+              "ratings": 3574,
+              "comments": 2117,
+              "crawlDate": 03272008,
+              "relatedIDs": ["_a0gQFOJYWM"],
+            }
+          - {
+              "videoID": "dh6dF1XY3uI",
+              "userID": "SouljaBoy",
+              "age": 1134,
+              "category": "News & Politics",
+              "length": 56,
+              "views": 13445,
+              "rate": 4.7,
+              "ratings": 3574,
+              "comments": 2117,
+              "crawlDate": 03272008,
+              "relatedIDs": [],
+            }
+    - verify:
+        collection: recommendationsWithUser
+        documents:
+          - {
+              numberRecommended: 2,
+              recommendedVideoID: "dh6dF1XY3uI",
+              sourceVideoViews: 101842,
+              userID: "SouljaBoy",
+              videoViews: 13445,
+            }
+          - {
+              numberRecommended: 2,
+              recommendedVideoID: "SfaxA9Q-9AQ",
+              sourceVideoViews: 101842,
+              userID: "barelypolitical",
+              videoViews: 555203,
+            }
+          - {
+              numberRecommended: 2,
+              recommendedVideoID: "_a0gQFOJYWM",
+              sourceVideoViews: 555661,
+              userID: "sxephil",
+              videoViews: 101384,
+            }
+          - {
+              numberRecommended: 1,
+              recommendedVideoID: "QuRYeRnAuXM",
+              sourceVideoViews: 101384,
+              userID: "thecomputernerd01",
+              videoViews: 458,
+            }
