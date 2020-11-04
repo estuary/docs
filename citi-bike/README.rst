@@ -221,8 +221,8 @@ and customers are avoiding it.
 
 Event-driven systems usually aren't terribly good at detecting when things *haven't*
 happened. At this point, an engineer will often reach for a task scheduler like Airflow,
-and set up a job that makes and compares periodic snapshots of bike locations to find
-those that haven't changed.
+and set up a job that takes periodic snapshots of bike locations, and compares them to
+find ones which haven't changed.
 
 Flow offers a simpler approach, which is to join the rides collection with itself,
 using a *read delay*:

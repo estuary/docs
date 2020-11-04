@@ -2,8 +2,18 @@ Reductions
 ==========
 
 Flow implements a number of reduction strategies for use within schemas,
-which tell Flow how two instances of a document can be usefully combined
-together.
+which tell Flow how two instances of a document can be meaningfully
+combined together.
+
+Reduction strategies are JSON Schema annotations_, and as such their
+applicability at a given document location can be controlled through the use
+of conditional_ keywords within the schema like oneOf or if/then/else.
+This means Flow's built-in strategies below can be combined with schema
+conditionals to construct a wider variety of custom reduction behaviors,
+such as reset-able values.
+
+.. _annotations: https://json-schema.org/draft/2019-09/json-schema-core.html#rfc.section.7.7
+.. _conditional: https://json-schema.org/understanding-json-schema/reference/conditionals.html
 
 Guarantees
 ----------
@@ -12,13 +22,13 @@ In Flow, documents having the same collection key and written to the same
 logical partition have a "total order", meaning that one document is
 universally understood to have been written *before* the other.
 
-Note this doesn't hold for documents of the same key written to *different*
+This doesn't hold for documents of the same key written to *different*
 logical partitions. These documents can be considered "mostly" ordered:
 Flow uses timestamps to understand the relative ordering of these documents,
-and while this largely does the Right Thing, small amounts of re-ordering
+and while this largely does the "Right Thing", small amounts of re-ordering
 are possible and even likely.
 
-Flow also guarantees exactly-once semantics within derived collections and
+Flow guarantees exactly-once semantics within derived collections and
 materializations (so long as the target system supports transactions),
 and a document reduction will be applied exactly one time.
 

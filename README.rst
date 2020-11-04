@@ -19,7 +19,7 @@ back-fill over months or even years of historical data, and which then seamlessl
 transition to low latency updates of new data.
 
 Flow is configuration driven and uses a developer-centric workflow that emphasizes
-version control, composition and re-use, rich schematization, and built in testing.
+version control, composition & re-use, rich schematization, and built in testing.
 It's runtime offers flexible scaling, and takes best advantage of data reductions
 and cloud pricing models to offer a surprisingly low total cost of ownership.
 
@@ -38,7 +38,7 @@ This documentation is interactive! You can directly open it on GitHub using
 Codespaces_, or you can clone this repo and open using the `VSCode Remote Containers`_
 extension. Both options will spin up an environment with the Flow CLI tools,
 add-ons for VSCode editor support, and an attached PostgreSQL database for
-trying out materializations. See :doc:`getting started vscode <docs/getting-started-vscode>` 
+trying out materializations. See :doc:`Getting started with VSCode <docs/getting-started-vscode>`
 for a step-by-step walkthrough.
 
 .. _Codespaces: https://github.com/features/codespaces

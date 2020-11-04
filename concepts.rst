@@ -306,21 +306,85 @@ Some examples:
 .. code-block:: yaml
 
     collections:
-    - name: my/collection/of/web/sessions
-        schema: web-session.schema.yaml
+    - name: example/sessions
+        schema: session.schema.yaml
         key: [/user/id, /timestamp]
         projections:
             # A "user/id" projection field is automatically inferred.
             # Add an supplemental field that doesn't have a slash.
             user_id: /user/id
-            # Define a logical partitioning over "/country".
-            country:
-                location_ptr: /country
-                partition: true
             # Partly decompose a nested array of requests into a handful of named projections.
             "first request": /requests/0
             "second request": /requests/1
             "third request": /requests/2
+            # Define logical partitions over country and device type.
+            country:
+                location_ptr: /country
+                partition: true
+            device:
+                location_ptr: /agent/type
+                partition: true
+
+Logical Partitions
+------------------
+
+A logical partition of a collection is a projection which physically segregates
+the storage of documents by the partitioned value. Derived collections can
+in turn provide a *partition selector* which identifies a subset of partitions
+of the source collection that should be read:
+
+.. code-block:: yaml
+
+    collections:
+    - name: example/derived
+      derivation:
+        transform:
+            fromSessions:
+                source:
+                    name: example/sessions
+                    partitions:
+                        include:
+                            country: [US, CA]
+                        exclude:
+                            device: [Desktop]
+
+Partition selectors are very efficient, as they allow Flow to altogether avoid
+reading documents which aren't needed by the derived collection.
+
+Partitions also enable *predicate push-down* when directly processing collection
+files using tools that understand Hive partitioning, like Snowflake, BigQuery, and Spark.
+Under the hood, the partitioned fields of a document are applied to name and
+identify the `Gazette journal`_ into which the document is written, which in turn
+prescribes how journal `fragment files`_ are arranged within cloud storage.
+
+For example, a document of "example/sessions" like
+``{"country": "CA", "agent": {"type": "iPhone"}, ...}``
+would map to a Gazette journal prefix of
+``example/sessions/country=CA/device=iPhone/``,
+which in turn produces fragment files in cloud storage like:
+``s3://bucket/example/sessions/country=CA/device=iPhone/pivot=00/utc_date=2020-11-04/utc_hour=16/<name>.gz``.
+
+Tools that understand Hive partitioning are able to take query predicates over "country",
+"device", or "utc_date/hour" and push them "down" into the selection of files
+which must be read to answer the query -- often offering much faster query
+execution because far less data must be read.
+
+.. note::
+
+    "pivot" identifies a *physical partition*, while "utc_date" and "utc_hour"
+    reflect the time at which the journal fragment was created.
+
+    Within a logical partition there are one or more physical partitions,
+    each a Gazette journal, into which documents are actually written.
+    The logical partition prefix is extended with a "pivot" suffix to arrive
+    at a concrete journal name.
+
+    Flow is designed so that physical partitions can be dynamically added
+    at any time, to scale the write & read throughput capacity of a collection.
+
+.. _`Gazette journal`: https://gazette.readthedocs.io/en/latest/brokers-concepts.html#journals
+.. _`fragment files`: https://gazette.readthedocs.io/en/latest/brokers-concepts.html#fragment-files
+
 
 Ingestion
 *********
