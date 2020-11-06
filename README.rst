@@ -35,14 +35,14 @@ Running Examples
 ================
 
 This documentation is interactive! You can directly open it on GitHub using
-Codespaces_, or you can clone this repo and open using the `VSCode Remote Containers`_
-extension. Both options will spin up an environment with the Flow CLI tools,
+Codespaces_, or you can clone this repo and open using the VSCode Remote Containers
+extension (see our guide_). Both options will spin up an environment with the Flow CLI tools,
 add-ons for VSCode editor support, and an attached PostgreSQL database for
-trying out materializations. See :doc:`Getting started with VSCode <docs/getting-started-vscode>`
-for a step-by-step walkthrough.
+trying out materializations.
 
 .. _Codespaces: https://github.com/features/codespaces
 .. _`VSCode Remote Containers`: https://code.visualstudio.com/docs/remote/containers
+.. _guide: docs/getting-started-vscode
 
 .. code-block:: console
 

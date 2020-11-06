@@ -277,10 +277,6 @@ collapsing a torrent of ingested documents into a trickle.
     transaction. This natural back-pressure affords *plenty* of
     opportunity for data reductions, while minimizing latency.
 
-    In other words, as a target database becomes busier or slower,
-    Flow becomes more efficient at combining many documents into few
-    table updates.
-
 Projections
 ***********
 
@@ -428,7 +424,7 @@ Sources
 -------
 
 A source is an "upstream" collection being consumed by a derived collection.
-It source collection can itself be either captured or derived. However,
+Sources can be either captured or derived, however
 a derived collection cannot directly or indirectly source from itself.
 
 In other words, collections must represent a directed acyclic graph
@@ -438,10 +434,16 @@ which adds a cycle, if that's your thing.
 
 .. _halt: https://en.wikipedia.org/wiki/Halting_problem
 
+Selectors
+~~~~~~~~~
+
 Sources can specify a selector over partitions of the sourced collection,
 which will restrict the partitions which are read. Selectors are efficient,
 as they allow Flow to altogether avoid reading data that's not needed,
 rather than performing a read and then filtering it out.
+
+Source Schemas
+~~~~~~~~~~~~~~
 
 Collection schemas may evolve over time, and documents read from the source
 are re-validated against the current collection schema to ensure they
@@ -459,6 +461,49 @@ assert a stricter source schema. In the event that source documents violate
 that schema, the derivation will halt with an error. The user is then able
 to update their schema and transformations, and continue processing
 from where the derivation left off.
+
+Delayed Reads
+~~~~~~~~~~~~~
+
+Event-driven workflows are usually a great fit for reacting to events as they
+occur, but they aren't terribly good at taking action when something *hasn't*
+happened:
+
+    * A user adds a product to their cart, but then doesn't complete a purchase.
+    * A temperature sensor stops producing its expected, periodic measurements.
+
+Event driven solutions to this class of problem are challenging today.
+Minimally it requires integrating another system to manage many timers and tasks,
+bringing its own issues.
+
+Engineering teams will instead often shrug and switch from an event streaming
+paradigm to a periodic batch workflow -- gaining ease of implementation,
+but adding irremovable latency.
+
+Flow offers another solution, which is to add an optional *read delay* to a
+transform. When specified, Flow will use the read delay to *gate* the processing
+of documents, with respect to the timestamp encoded within each document's UUID,
+assigned by Flow at the time the document was ingested or derived.
+The document will remain gated until the current time is ahead of the
+document's timestamp, plus its read delay.
+
+Similarly, if a derivation with a read delay is added later, the delay is also
+applied to determine the relative processing order of historical documents.
+
+.. note::
+
+    Technically, Flow is gating the processing of a physical partition
+    which is very efficient due to Flow's architecture.
+    Documents that are closely ordered within a partition will also
+    have almost identical timestamps.
+
+    For more detail on document UUIDs, see `their Gazette documentation <https://gazette.readthedocs.io/en/latest/architecture-exactly-once.html?#message-uuids>`_.
+
+Read delays open up the possibility, for example, of joining a collection *with itself*
+to surface cases of shopping cart abandonment, or silenced sensors. A derivation
+might have a real-time transform that updates registers with a "last seen" timestamp
+on every sensor reading, and another transform with a five minute delay, that alerts
+if the "last seen" timestamp hasn't been updated *since* that sensor reading.
 
 Lambdas
 -------
@@ -487,33 +532,37 @@ Where applicable, Flow will also map JSON schemas into corresponding types in
 the lambda implementation language, facilitating static type checks during
 catalog builds.
 
-Today, Flow supports:
+.. note::
 
-:TypeScript:
+    Flow intends to support a variety of lambda languages in the future,
+    such as Python, SQLIte, and jq_.
 
-    TypeScript_ is typed JavaScript that compiles to regular JavaScript during
-    catalog builds, which Flow then executes on the NodeJS_ runtime.
-    JSON Schemas are mapped to TypeScript types with high fidelity,
-    enabling succinct and performant lambdas with rigorous type safety.
-    Lambdas can also take advantage of the NPM_ package ecosystem.
+    .. _jq: https://stedolan.github.io/jq/
 
-    .. _TypeScript: https://www.typescriptlang.org/
-    .. _NodeJS: https://nodejs.dev/
-    .. _NPM: http://npmjs.com/
 
-:Remote Endpoint:
+TypeScript Lambdas
+~~~~~~~~~~~~~~~~~~
 
-    Remote endpoints are URLs which Flow invokes via JSON POST, sending batches
-    of input documents and expecting to receive batches of output documents in return.
+TypeScript_ is typed JavaScript that compiles to regular JavaScript during
+catalog builds, which Flow then executes on the NodeJS_ runtime.
+JSON Schemas are mapped to TypeScript types with high fidelity,
+enabling succinct and performant lambdas with rigorous type safety.
+Lambdas can also take advantage of the NPM_ package ecosystem.
 
-    They're a means of integrating other languages and environments into a Flow derivation.
-    Intended uses include APIs implemented in other languages, running as "serverless"
-    functions (AWS lambdas, or Google Cloud Functions).
+.. _TypeScript: https://www.typescriptlang.org/
+.. _NodeJS: https://nodejs.dev/
+.. _NPM: http://npmjs.com/
 
-Flow intends to support a wider variety of lambda languages in the future,
-such as Python, SQLIte, and jq_.
 
-.. _jq: https://stedolan.github.io/jq/
+Remote Lambdas
+~~~~~~~~~~~~~~
+
+Remote endpoints are URLs which Flow invokes via JSON POST, sending batches
+of input documents and expecting to receive batches of output documents in return.
+
+They're a means of integrating other languages and environments into a Flow derivation.
+Intended uses include APIs implemented in other languages, running as "serverless"
+functions (AWS lambdas, or Google Cloud Functions).
 
 
 Registers
@@ -631,4 +680,58 @@ concurrently, even where many may share a common shuffle key.
 Materializations
 ****************
 
-Write me.
+Materializations are the means by which Flow "pushes" collections into your databases,
+key/value stores, publish/subscribe systems, WebHook APIs, and so on.
+They connect a collection to a target system, via a *materialization* of the collection
+that continuously updates with the collection itself.
+
+Wherever applicable, materializations are always indexed by the collection key.
+For SQL specifically, this means components of the collection key are used as the
+composite primary key of the table.
+
+Many systems are document-oriented in nature, and can accept unmodified collection documents.
+Others are table-oriented, and when materializing into these systems the user first
+selects a subset of available projections, where each projection becomes a column in
+the created target table.
+
+.. note::
+
+    For the moment, Flow offers PostgreSQL and SQLite as available materialization targets.
+    Again, what's implemented today is a minimal baseline to enable early use cases.
+    We have lots planned here.
+
+Transactions
+------------
+
+Flow executes updates of materializations within transactions, and if the materialized
+system is also transactional, then these transactions are integrated for end-to-end
+"exactly once" semantics. At a high level, transactions:
+
+ * *Read* current documents from the store for relevant collection keys (where applicable, and not already cached by the runtime).
+ * *Reduce* one or more new collection documents into each of those read values.
+ * *Write* the updated document back out to the store (or stream, etc).
+
+One thing to note is that Flow issues at most one store read, and just one store write
+per collection key, per transaction. That's irrespective to the number of collection documents
+that were ultimately reduced within the transaction. An implication is that a "flood" of
+collection documents can frequently be reduced to a comparative "trickle" of database updates,
+allowing the database to be scaled independently of the collection's raw rate.
+
+Flow also pipelines transactions: while one store transaction is in the process of committing,
+Flow is reading and reducing documents of the *next* transaction as it awaits the prior
+transaction's commit. As a target database becomes busier or slower,
+Flow becomes more efficient at combining many documents into fewer table updates.
+
+
+Creation Workflow
+-----------------
+
+Flow offers an interactive command-line workflow (``flowctl materialize``) by which materializations
+are created, using collections, projections, and *materialization targets* defined in the Flow catalog.
+
+A materialization target simply defines a target system (eg, PostgreSQL), and the
+connection parameters which are necessary to reach it. It gives the target a short and
+memorable.
+
+Once the workflow is completed, the Flow runtime creates and manages the long-lived
+execution context which will continuously keep the materialization up-to-date.
