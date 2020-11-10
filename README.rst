@@ -71,4 +71,5 @@ Table of Contents
    Concepts <concepts>
    Getting Started with VS Code <docs/getting-started-vscode>
    Reductions <reductions/README>
+   Ingesting Data <docs/ingest>
    Example: Citi Bike <citi-bike/README>
