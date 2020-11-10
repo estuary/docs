@@ -7,4 +7,4 @@ materializationTargets:
   # container which may be accessed for testing.
   testDB:
     postgres:
-      uri: postgresql://flow:flow@localhost:5432/flow?sslmode=disable
+      uri: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
