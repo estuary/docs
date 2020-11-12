@@ -277,6 +277,8 @@ collapsing a torrent of ingested documents into a trickle.
     transaction. This natural back-pressure affords *plenty* of
     opportunity for data reductions, while minimizing latency.
 
+.. _concepts-projections:
+
 Projections
 ***********
 
