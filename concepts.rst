@@ -1,6 +1,13 @@
 Concepts
 =========
 
+.. warning::
+
+    This section is pretty dense. We need to break up and refactor content into smaller,
+    more comprehensible chunks.
+    You may want to take a look at examples first, and pick through
+    topics here as more of a reference.
+
 Collection
 **********
 

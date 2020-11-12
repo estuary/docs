@@ -68,8 +68,9 @@ Table of Contents
    :maxdepth: 2
    :caption: Overview
 
-   Concepts <concepts>
+   How Flow Helps <how-flow-helps>
    Getting Started with VS Code <docs/getting-started-vscode>
+   Concepts <concepts>
    Reductions <reductions/README>
    Ingesting Data <docs/ingest>
    Example: Citi Bike <citi-bike/README>
