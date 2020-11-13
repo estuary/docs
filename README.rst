@@ -81,6 +81,7 @@ Table of Contents
    Comparisons <comparisons>
    Working with VS Code <docs/getting-started-vscode>
    Concepts <concepts>
-   Reductions <reductions/README>
+   Reduction Types <reductions/README>
+   Derivation Patterns <derive-patterns/README>
    Ingesting Data <docs/ingest>
    Example: Citi Bike <citi-bike/README>

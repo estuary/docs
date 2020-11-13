@@ -17,23 +17,12 @@ $defs:
       String: { type: string }
     required: [Key, String]
 
-  summer:
-    $anchor: Summer
+  join:
+    $anchor: Join
+    description: "Document for join examples"
     type: object
-    reduce: { strategy: merge }
     properties:
       Key: { type: string }
-      Sum:
-        type: integer
-        reduce: { strategy: sum }
-    required: [Key]
-
-  joinRegister:
-    $anchor: JoinRegister
-    description: "Register document for join examples"
-    type: object
-    reduce: { strategy: merge }
-    properties:
       LHS:
         type: integer
         reduce: { strategy: sum }
@@ -41,13 +30,3 @@ $defs:
         type: array
         items: { type: string }
         reduce: { strategy: append }
-
-  joinResult:
-    $anchor: JoinResult
-    description: "Output document for join examples"
-    type: object
-    properties:
-      LHS: { type: integer }
-      RHS: { type: array }
-      Key: { type: string }
-    required: [Key]

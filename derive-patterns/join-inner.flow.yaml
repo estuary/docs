@@ -3,12 +3,17 @@ import:
 
 collections:
   - name: patterns/inner-join
-    schema: schema.yaml#JoinResult
+    schema:
+      $ref: schema.yaml#Join
+      reduce: { strategy: lastWriteWins }
+      required: [Key]
     key: [/Key]
 
     derivation:
       register:
-        schema: schema.yaml#JoinRegister
+        schema:
+          $ref: schema.yaml#Join
+          reduce: { strategy: merge }
         initial: {}
 
       transform:

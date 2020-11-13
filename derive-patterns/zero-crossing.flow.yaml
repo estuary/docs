@@ -8,10 +8,10 @@ collections:
 
     derivation:
       register:
-        initial: 0
         schema:
           type: integer
           reduce: { strategy: sum }
+        initial: 0
 
       transform:
         fromInts:
