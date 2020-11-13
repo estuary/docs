@@ -18,6 +18,7 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
+          shuffle: [/Key]
           publish:
             nodeJS: |
               return [{Key: source.Key, Sum: source.Int}];
@@ -39,6 +40,7 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
+          shuffle: [/Key]
           update:
             nodeJS: |
               return [source.Int];
@@ -50,13 +52,12 @@ tests:
   "Expect we can do sums during materialization or within registers":
     - ingest:
         collection: patterns/ints
-        documents: [{ Key: key, Int: 5 }]
+        documents:
+          - { Key: key, Int: -3 }
+          - { Key: key, Int: 5 }
     - ingest:
         collection: patterns/ints
         documents: [{ Key: key, Int: 10 }]
-    - ingest:
-        collection: patterns/ints
-        documents: [{ Key: key, Int: -3 }]
     - verify:
         # "verify" steps fully reduce documents of the collection.
         # Under the hood, these are multiple delta updates.

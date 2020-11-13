@@ -19,12 +19,14 @@ collections:
       transform:
         publishLHS:
           source: { name: patterns/ints }
+          shuffle: [/Key]
           publish:
             nodeJS: |
               return [{Key: source.Key, LHS: source.Int, RHS: register.RHS}]
 
         updateRHS:
           source: { name: patterns/strings }
+          shuffle: [/Key]
           update:
             nodeJS: |
               return [{RHS: [source.String]}];
