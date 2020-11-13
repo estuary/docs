@@ -2,6 +2,12 @@
 Ingesting Data
 ==============
 
+.. note::
+
+    Flow's current ingestion capabilities should be considered a proof of concept.
+    We plan to make it *much* simpler to express integrations into pub/sub systems,
+    databases for "change data capture", and more.
+
 There are a number of different options for how to ingest data into Flow:
 
 * `HTTP PUT or POST requests`
