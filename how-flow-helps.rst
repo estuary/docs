@@ -7,6 +7,7 @@ Data Integrity
 | "My pipeline blew up in production because it thought a field wasn't null-able (and it was)."
 | "Another team changed their schema, my team didn't realize, and it broke our pipeline."
 | "An upstream bug caused my pipeline to read and propagate bad data."
+| "I need to update my pipeline. How can I be confident I won't break downstream use cases?"
 
 Data errors and integrity issues are a common problem within larger teams and organizations.
 Mistakes are a fact of life, teams don't always communicate proactively, and vendors or partners
@@ -29,8 +30,8 @@ and often before pipelines are even deployed to production.
   .. _`Great Expectations`: https://greatexpectations.io/
 
 * You can integrate un-trusted sources using an "Extract Load Transform" pattern, where documents
-  are first written to a collection with a permissive schema -- ensuring documents are never
-  never lost -- and then verified against a more restrictive schema while being read.
+  are first written to a collection with a permissive schema -- ensuring documents are
+  never lost -- and are then verified against a more restrictive schema while being transformed.
 
   If a validation error occurs, Flow halts the pipeline to provide an opportunity for
   the schema and transform to be fixed. The pipeline can then be resumed, and while
@@ -47,6 +48,7 @@ and often before pipelines are even deployed to production.
 * Flow makes it easy to write *contract test* that verify the integrated, end-to-end
   behavior of multi-stage processing pipelines. Tests can be run during local development
   and within a CI system (e.x. Github Actions or Jenkins).
+
 
 Historical Replays
 ------------------
@@ -77,8 +79,9 @@ Unbounded Look-back
 
 If you've spent time with continuous data systems that offer stream-to-stream joins
 (e.x. Flink, Spark, ksqlDB), you've no doubt read quite a bit on their various ways
-of expressing windowing semantics: event-time windows, hopping windows, rolling windows,
-session windows, etc.
+of expressing windowing semantics for stream-to-stream joins:
+event-time windows, hopping windows, rolling windows, session windows, etc.
+
 Each has a slightly different expressions and semantics, but at their core, they're
 asking you to scope the portions of the joined streams which they have to consider at
 any given time.
@@ -91,7 +94,8 @@ Flow uses a simpler and more powerful conceptual model -- the *register* -- whic
 allows for multi-way streaming joins and aggregations with arbitrary look-back.
 
 With Flow, for example, it's trivial to convert a stream of customer purchases
-into a stream of customer lifetime value.
+into a stream of customer lifetime value. Or to join a purchase with the user's
+first engagement with that product, over a month ago.
 
 
 Data Reductions
@@ -165,6 +169,33 @@ documentation for exploring a catalog, that can integrate directly
 into Github pages and be versioned with your repo. This keeps product,
 analyst, and business stakeholders "in the loop" with comprehensive
 documentation that updates as part of the engineering workflow.
+
+
+Cheap Stream-to-Stream Joins
+----------------------------
+
+| "I have a huge stream to join, and it's expensive to index!"
+
+A canonical example is joining advertising "views", of which there are many,
+with a later "click", of which there are very few, joined over a common
+impression ID.
+
+Typically this is done -- either explicitly, or under the hood as part of
+an execution plan -- by processing the view event first, and indexing it
+within a local state store on the impression ID. Then, should a click event
+come, it's matched against the indexed view and emitted.
+
+But while local state stores are typically very fast and cheap to *read*,
+**mutating** state is perhaps the *most expensive* operation in a continuous
+data pipeline, due to the replication required under the hood. Flow goes to
+great lengths to make this efficient, but there are hard limits around
+transaction boundaries.
+
+Flow lets you flip the problem on its head, by indexing current *clicks*
+and joining against *views* read with, say, a 5 minute delay.
+This is far more efficient: an order of magnitude fewer local state
+mutations, paired with cheap delayed reads to match each view
+against a potential indexed click.
 
 
 Tyranny of Partitioning
