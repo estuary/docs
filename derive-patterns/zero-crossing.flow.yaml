@@ -16,6 +16,7 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
+          shuffle: [/Key]
           update:
             nodeJS: return [source.Int];
           publish:
@@ -29,20 +30,28 @@ tests:
   "Expect we can filter to zero-crossing documents":
     - ingest:
         collection: patterns/ints
-        documents: [{ Key: key, Int: -5 }]
+        documents:
+          - { Key: key, Int: -5 } # => -5
+          - { Key: key, Int: -10 } # => -10
     - ingest:
         collection: patterns/ints
-        documents: [{ Key: key, Int: -10 }]
-    - ingest:
-        collection: patterns/ints
-        documents: [{ Key: key, Int: 13 }]
+        documents: [{ Key: key, Int: 13 }] # => -2
     - verify:
         collection: patterns/zero-crossing
         documents: []
-    # Next ingest increases register from -2 => 2.
     - ingest:
         collection: patterns/ints
-        documents: [{ Key: key, Int: 4 }]
+        documents:
+          - { Key: key, Int: 4 } # => 2 (zero crossing)
+          - { Key: key, Int: 10 } # => 12
     - verify:
         collection: patterns/zero-crossing
         documents: [{ Key: key, Int: 4 }]
+    - ingest:
+        collection: patterns/ints
+        documents:
+          - { Key: key, Int: -13 } # => -1 (zero crossing)
+          - { Key: key, Int: -5 } # => -6
+    - verify:
+        collection: patterns/zero-crossing
+        documents: [{ Key: key, Int: -13 }]

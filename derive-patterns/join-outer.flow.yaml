@@ -13,12 +13,14 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
+          shuffle: [/Key]
           publish:
             nodeJS: |
               return [{Key: source.Key, LHS: source.Int}];
 
         fromStrings:
           source: { name: patterns/strings }
+          shuffle: [/Key]
           publish:
             nodeJS: |
               return [{Key: source.Key, RHS: [source.String]}];
