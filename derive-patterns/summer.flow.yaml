@@ -1,0 +1,64 @@
+import:
+  - inputs.flow.yaml
+
+collections:
+  - name: patterns/sums
+    schema: &schema
+      type: object
+      properties:
+        Key: { type: string }
+        Sum:
+          type: integer
+          reduce: { strategy: sum }
+      required: [Key]
+      reduce: { strategy: merge }
+    key: [/Key]
+
+    derivation:
+      transform:
+        fromInts:
+          source: { name: patterns/ints }
+          publish:
+            nodeJS: |
+              return [{Key: source.Key, Sum: source.Int}];
+
+  - name: patterns/sums-register
+    schema:
+      <<: *schema
+      reduce: { strategy: lastWriteWins }
+    key: [/Key]
+
+    derivation:
+      register:
+        initial: 0
+        schema:
+          type: integer
+          reduce: { strategy: sum }
+
+      transform:
+        fromInts:
+          source: { name: patterns/ints }
+          update:
+            nodeJS: return [source.Int];
+
+          publish:
+            nodeJS: |
+              return [{Key: source.Key, Sum: register}];
+
+tests:
+  "Expect we can do sums during materialization or within registers":
+    - ingest:
+        collection: patterns/ints
+        documents: [{ Key: key, Int: 5 }]
+    - ingest:
+        collection: patterns/ints
+        documents: [{ Key: key, Int: 10 }]
+    - ingest:
+        collection: patterns/ints
+        documents: [{ Key: key, Int: -3 }]
+    - verify:
+        collection: patterns/sums
+        documents: [{ Key: key, Sum: 12 }]
+    - verify:
+        collection: patterns/sums-register
+        documents: [{ Key: key, Sum: 12 }]
