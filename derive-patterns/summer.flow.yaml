@@ -2,7 +2,7 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/sums
+  - name: patterns/sums-db
     schema: &schema
       type: object
       properties:
@@ -24,23 +24,24 @@ collections:
 
   - name: patterns/sums-register
     schema:
+      # Re-use the schema defined above.
       <<: *schema
       reduce: { strategy: lastWriteWins }
     key: [/Key]
 
     derivation:
       register:
-        initial: 0
         schema:
           type: integer
           reduce: { strategy: sum }
+        initial: 0
 
       transform:
         fromInts:
           source: { name: patterns/ints }
           update:
-            nodeJS: return [source.Int];
-
+            nodeJS: |
+              return [source.Int];
           publish:
             nodeJS: |
               return [{Key: source.Key, Sum: register}];
@@ -57,8 +58,11 @@ tests:
         collection: patterns/ints
         documents: [{ Key: key, Int: -3 }]
     - verify:
-        collection: patterns/sums
+        # "verify" steps fully reduce documents of the collection.
+        # Under the hood, these are multiple delta updates.
+        collection: patterns/sums-db
         documents: [{ Key: key, Sum: 12 }]
     - verify:
+        # These are multiple snapshots, of which "verify" takes the last.
         collection: patterns/sums-register
         documents: [{ Key: key, Sum: 12 }]
