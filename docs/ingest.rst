@@ -8,17 +8,17 @@ There are a number of different options for how to ingest data into Flow:
 * `Stream data over a Websocket` in either `CSV, TSV`, or `JSON` formats
 
 
-Flow Ingester API
-=================
+flow-ingester
+-------------
 
 Flow ships with the ``flow-ingester`` binary, which provides network service endpoints for ingesting
 data into Flow Collections. There are currently two main APIs, a REST API accepts data in HTTP PUT and
 POST requests, and a websocket API that accepts data streamed over websocket connections. Only
 captured collections may ingest data in this way, not derivations.
 
-When you run ``flowctl develop``, the Flow Ingester will listen on ``http://localhost:8081`` by default. 
+When you run ``flowctl develop``, the Flow Ingester will listen on ``http://localhost:8081`` by default.
 
-Flow Ingester will always validate all documents against the collection's schema before they are written, 
+Flow Ingester will always validate all documents against the collection's schema before they are written,
 so invalid data will never be added to the collection. Note that your collection schema may
 be as permissive as you like, and you can always apply more restrictive schemas in derivations if
 you want to.
@@ -28,7 +28,7 @@ annotations on the schema, if present. This is done to optimize the storage spac
 that see frequent updates to the same key.
 
 REST API
-========
+--------
 
 The REST API makes it easy to add data to one or more Flow collections transactionally. The endpoint
 is available at ``/ingest`` (e.g. ``http://localhost:8081/ingest``). This endpoint will respond only
@@ -77,7 +77,7 @@ from Gazette or cloud storage if desired.
 
 
 REST Transactional Semantics
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Flow Ingester will ingest the data using a single Gazette transaction per REST request. For details
 on Gazette transactions, see the `Gazette Transactional Append docs`_. The summary is basically that:
@@ -89,7 +89,7 @@ on Gazette transactions, see the `Gazette Transactional Append docs`_. The summa
 
 
 Websocket API
-=============
+-------------
 
 The Websocket API provides an alternative for ingesting data, which is especially useful when you
 don't know how much data there is ahead of time, or when you don't need precise control over
@@ -116,7 +116,7 @@ If you're using the `websocat CLI`_, then you can simply use the ``--protocol`` 
 .. _`websocat CLI`: https://github.com/vi/websocat
 
 Ingesting JSON over Websocket
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When ingesting JSON, Flow Ingester accepts data over the websocket in "JSON-newline" (a.k.a. `JSON Lines`_) format.
 Objects should not be enclosed within an array or have any separator characters between them except for whitespace.
@@ -138,7 +138,7 @@ so:
 This will add the data to the collection named ``examples/citi-bike/rides``.
 
 Ingesting CSV/TSV over Websocket
---------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Flow Ingester is able to ingest a few different character-separated formats. Currently it supports
 Comma-separated (CSV) and Tab-separated (TSV) formats, using the `csv/v1` and `tsv/v1` protocols,
@@ -182,7 +182,7 @@ the collection's json schema to determine the required type of each property. Ad
 document that's constructed is validated against the collection's schema prior to it being written.
 
 Null, Empty, and Missing Values
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In JSON documents, there's a difference between an explicit ``null`` value and one that's undefined.
 When Flow Ingester parses a character-separated row, it also differntiates between ``null``, empty
@@ -217,7 +217,7 @@ quotes. In row ``3``, the trailing comma indicates that the row has two values, 
 
 
 Websocket Responses
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Regardless of which format you ingest, all websocket ingestions will return responses similar to
 the following:

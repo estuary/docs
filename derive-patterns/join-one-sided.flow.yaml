@@ -1,0 +1,51 @@
+import:
+  - inputs.flow.yaml
+
+collections:
+  - name: patterns/one-sided-join
+    schema: schema.yaml#JoinResult
+    key: [/Key]
+
+    derivation:
+      register:
+        schema: schema.yaml#JoinRegister
+        initial: { RHS: [] }
+
+      transform:
+        publishLHS:
+          source: { name: patterns/ints }
+          publish:
+            nodeJS: |
+              return [{Key: source.Key, LHS: source.Int, RHS: register.RHS}]
+
+        updateRHS:
+          source: { name: patterns/strings }
+          update:
+            nodeJS: |
+              return [{RHS: [source.String]}];
+
+tests:
+  "Expect a left join of the current LHS with the accumulated RHS":
+    - ingest:
+        collection: patterns/ints
+        documents: [{ Key: key, Int: 5 }]
+    - verify:
+        collection: patterns/one-sided-join
+        documents: [{ Key: key, LHS: 5, RHS: [] }]
+    - ingest:
+        collection: patterns/strings
+        documents: [{ Key: key, String: hello }]
+    - verify:
+        # The prior document isn't updated, as the join
+        # reacts only to events of the LHS.
+        collection: patterns/one-sided-join
+        documents: [{ Key: key, LHS: 5, RHS: [] }]
+    - ingest:
+        collection: patterns/strings
+        documents: [{ Key: key, String: goodbye }]
+    - ingest:
+        collection: patterns/ints
+        documents: [{ Key: key, Int: 7 }]
+    - verify:
+        collection: patterns/one-sided-join
+        documents: [{ Key: key, LHS: 7, RHS: [hello, goodbye] }]
