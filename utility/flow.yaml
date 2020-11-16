@@ -1,0 +1,125 @@
+collections:
+  - name: utility/poles
+    key: [/id]
+    schema: schema.yaml#/$defs/pole
+    projections:
+      locationType: /location/type
+      long: /location/coordinates/0
+      lat: /location/coordinates/1
+
+  - name: utility/inspections
+    key: [/poleId, /date, /inspectorId]
+    schema: schema.yaml#/$defs/inspection
+    projections:
+      serviceRequired: /serviceRequired
+
+  - name: utility/completed-repairs
+    key: [/poleId]
+    schema: schema.yaml#/$defs/completedRepair
+
+  - name: utility/poles-requiring-maintenance
+    key: [/poleId]
+    schema: schema.yaml#/$defs/poleRequiringMaintenance
+    derivation:
+      register:
+        initial: {}
+        schema:
+          type: object
+          properties:
+            pole: { $ref: schema.yaml#/$defs/pole }
+            inspection: { $ref: schema.yaml#/$defs/inspection }
+          reduce: { strategy: merge }
+      transform:
+        inspections:
+          source:
+            name: utility/inspections
+          shuffle:
+            - /poleId
+          update:
+            nodeJS: |
+              // update the register with the most recent inspection
+              return [{ inspection: source }]
+          publish:
+            nodeJS: |
+              // if the register has 
+              if (register.inspection?.serviceRequired) {
+                let doc: collections.UtilityPolesRequiringMaintenance = {
+                  poleId: register.inspection!.poleId,
+                  serviceRequired: register.inspection!.serviceRequired!.toString(),
+                  lastInspection: {
+                    date: register.inspection!.date,
+                    inspectorId: register.inspection!.inspectorId
+                  }
+                };
+                if (register.pole?.location) {
+                  doc.location = register.pole!.location;
+                }
+                return [doc]
+              } else {
+                return []
+              }
+
+        poles:
+          source:
+            name: utility/poles
+          update:
+            nodeJS: |
+              return [{pole: source}]
+          publish:
+            nodeJS: |
+              if (register.inspection?.serviceRequired) {
+                let doc: collections.UtilityPolesRequiringMaintenance = {
+                  poleId: source.id,
+                  serviceRequired: register.inspection!.serviceRequired!.toString(),
+                  lastInspection: {
+                    date: register.inspection!.date,
+                    inspectorId: register.inspection!.inspectorId
+                  },
+                };
+                if (source.location) {
+                  doc.location = source.location;
+                }
+                return [doc]
+              } else {
+                // don't produce any documents if the inspection is ok
+                return []
+              }
+
+        serviceComplete:
+          source:
+            name: utility/completed-repairs
+          update:
+            nodeJS: |
+              return [{
+                inspection: {
+                  poleId: source.poleId,
+                  inspectorId: source.inspectorId,
+                  date: source.repairDate,
+                  serviceRequired: false
+                }
+              }]
+          publish:
+            nodeJS: |
+              if (register.pole) {
+                let doc: collections.UtilityPolesRequiringMaintenance = {
+                  poleId: register.pole!.id,
+                  serviceRequired: null,
+                  lastInspection: {
+                    inspectorId: register.inspection!.inspectorId,
+                    date: register.inspection!.date
+                  }
+                };
+                if (register.pole?.location) {
+                  doc.location = register.pole!.location;
+                }
+                return [doc];
+              } else {
+                return [];
+              }
+
+materializationTargets:
+  # When this repository is run as a VSCode devcontainer, it composes a PostgreSQL
+  # container which may be accessed for testing.
+  testDB:
+    postgres:
+      uri: postgresql://flow:flow@localhost:5432/flow?sslmode=disable

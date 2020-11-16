@@ -1,0 +1,56 @@
+$defs:
+  pole:
+    type: object
+    properties:
+      id: { type: string }
+      height: { type: integer }
+      class: { type: integer }
+      material: { type: string }
+      setDate:
+        type: string
+        format: date
+      location: { $ref: https://geojson.org/schema/Point.json }
+      jointUsers:
+        type: array
+        items: { type: string }
+    required: [id]
+
+  inspection:
+    type: object
+    properties:
+      poleId: { type: string }
+      inspectorId: { type: string }
+      date:
+        type: string
+        format: date
+      serviceRequired:
+        oneOf:
+          - enum: [false]
+          - type: string
+    required: [poleId, inspectorId, date, serviceRequired]
+
+  completedRepair:
+    type: object
+    properties:
+      poleId: { type: string }
+      repairDate:
+        type: string
+        format: date
+      inspectorId: { type: string }
+    required: [poleId, repairDate, inspectorId]
+
+  poleRequiringMaintenance:
+    type: object
+    properties:
+      poleId: { type: string }
+      serviceRequired: { type: [string, "null"] }
+      location: { $ref: https://geojson.org/schema/Point.json }
+      lastInspection:
+        type: object
+        properties:
+          inspectorId: { type: string }
+          date:
+            type: string
+            format: date
+        required: [inspectorId, date]
+    required: [poleId, serviceRequired, lastInspection]
