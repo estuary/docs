@@ -1,0 +1,94 @@
+import:
+  - edits.flow.yaml
+
+collections:
+  - name: examples/wiki/pages
+    # Inline schema which rolls up page edit statistics,
+    # including a per-country breakdown:
+    schema:
+      $defs:
+        counter:
+          type: integer
+          reduce: { strategy: sum }
+
+        stats:
+          type: object
+          reduce: { strategy: merge }
+          properties:
+            cnt: { $ref: "#/$defs/counter" }
+            add: { $ref: "#/$defs/counter" }
+            del: { $ref: "#/$defs/counter" }
+
+      type: object
+      $ref: "#/$defs/stats"
+      properties:
+        page: { type: string }
+        byCountry:
+          type: object
+          reduce: { strategy: merge }
+          additionalProperties: { $ref: "#/$defs/stats" }
+
+      required: [page]
+    key: [/page]
+
+    # /byCountry is an object (which isn't projected by default),
+    # and we'd like to materialize it to a column.
+    projections:
+      byCountry: /byCountry
+
+    derivation:
+      transform:
+        rollUpEdits:
+          source:
+            name: examples/wiki/edits
+          publish:
+            nodeJS: |
+              let stats = {cnt: 1, add: source.added, del: source.deleted};
+
+              if (source.countryIsoCode) {
+                return [{
+                    page: source.page,
+                    byCountry: {[source.countryIsoCode]: stats},
+                    ...stats,
+                }];
+              }
+              // Unknown country.
+              return [{page: source.page, ...stats}];
+
+tests:
+  "Wiki pages roll up from edits":
+    - ingest:
+        collection: examples/wiki/edits
+        documents:
+          - {
+              "time": "2015-09-12T00:49:09Z",
+              "page": "正岡大介",
+              "channel": "#ja.wikipedia",
+              "countryIsoCode": "JP",
+              "delta": -113,
+              "added": 0,
+              "deleted": 113,
+            }
+          - {
+              "time": "2015-09-13T01:12:27Z",
+              "page": "正岡大介",
+              "channel": "#ja.wikipedia",
+              "countryIsoCode": "IN",
+              "delta": 256,
+              "added": 250,
+              "deleted": 6,
+            }
+    - verify:
+        collection: examples/wiki/pages
+        documents:
+          - {
+              "page": "正岡大介",
+              "cnt": 2,
+              "add": 250,
+              "del": 119,
+              "byCountry":
+                {
+                  "IN": { "add": 250, "cnt": 1, "del": 6 },
+                  "JP": { "add": 0, "cnt": 1, "del": 113 },
+                },
+            }

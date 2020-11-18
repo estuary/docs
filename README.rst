@@ -84,4 +84,5 @@ Table of Contents
    Reduction Types <reductions/README>
    Derivation Patterns <derive-patterns/README>
    Ingesting Data <docs/ingest>
+   Example: Wiki Edits <examples/wiki/README>
    Example: Citi Bike <examples/citi-bike/README>
