@@ -2,22 +2,15 @@ import:
   - rides.flow.yaml
 
 collections:
-  # Derive idle bikes by using two transformations of the "rides"
-  # collection, both shuffled on bike_id.
-  #
-  # The first will read in real-time, and will store the last
-  # ride timestamp in the bike's register.
-  #
-  # The second will read with a delay, and will check whether the
-  # current register matches the end timestamp of the (delayed) ride.
-  # If so, then the bike hasn't moved since this ride occurred,
-  # and we publish an "idle bike" document into this collection.
+  # Derive idle bikes via two transforms of rides:
+  # * One reads in real-time, and stores the ride timestamp in a register.
+  # * Two reads with a delay, and checks whether the last
+  #   ride timestamp hasn't updated since this (delayed) ride.
   - name: examples/citi-bike/idle-bikes
     schema:
       type: object
       properties:
         bike_id: { type: integer }
-        # Station at which the bike is idle.
         station: { $ref: ride.schema.yaml#/$defs/terminus }
       required: [bike_id, station]
 
@@ -26,7 +19,7 @@ collections:
     derivation:
       register:
         # Store the most-recent ride timestamp for each bike_id,
-        # or use null if the bike hasn't taken a ride before.
+        # and default to null if the bike hasn't ridden before.
         schema: { type: [string, "null"] }
         initial: null
 
@@ -42,18 +35,13 @@ collections:
           source:
             name: examples/citi-bike/rides
           shuffle: [/bike_id]
-          # Use a 2-day read delay. This is always relative to the timestamp
-          # encoded within the document's UUID, assigned by Flow at the time the
-          # document was ingested or derived.
-          #
-          # To see read delays in action within a testing context, where data is
-          # replayed much more quickly, try using a smaller value (e.g., 2m).
-          #
-          # For (much) more detail on document UUIDs and timestamps, see:
-          # https://gazette.readthedocs.io/en/latest/architecture-exactly-once.html?#message-uuids
+          # Use a 2-day read delay, relative to the document's ingestion.
+          # To see read delays in action within a short-lived
+          # testing contexts, try using a smaller value (e.g., 2m).
           readDelay: "48h"
           publish:
             nodeJS: |
+              // Publish if the bike hasn't moved in 2 days.
               if (register === source.end.timestamp) {
                 return [{ bike_id: source.bike_id, station: source.end }];
               }
@@ -83,9 +71,8 @@ tests:
               timestamp: "2020-09-01 16:49:30.1610"
     - verify:
         collection: examples/citi-bike/idle-bikes
-        # When running in a testing context, the testing framework advances
-        # test time as needed, until all delayed collection reads have completed.
-        # Expect we generate an idle bike for the last station arrived at.
+        # When running tests, time is advanced as needed until all delayed reads
+        # can complete. Expect an idle bike for the station last arrived at.
         documents:
           - bike_id: *bike
             station: *station4

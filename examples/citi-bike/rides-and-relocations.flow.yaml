@@ -2,63 +2,32 @@ import:
   - rides.flow.yaml
 
 collections:
-  # Bikes are periodically relocated in the Citi Bike system, which show up as
-  # a bike ending a ride at one station and then starting a ride at another.
-  # Enrich rides with a preceding relocation event, when this happens.
   - name: examples/citi-bike/rides-and-relocations
+    key: [/bike_id, /begin/timestamp]
     schema:
+      # Relocations are rides marked by a "relocation: true" property.
       $ref: ride.schema.yaml
       properties:
         relocation: { const: true }
 
-    # Unique composite key for each ride or relocation.
-    key: [/bike_id, /begin/timestamp]
-
     derivation:
-      # We must determine if the start of a current ride is different than the
-      # end of a previous ride, for each bike. But, we don't have the prior
-      # ending station station available in the source document.
-      #
-      # Registers provide a place to persist state that's updated as source
-      # documents are processed. Each source document is mapped to a specific
-      # register through its shuffle key.
-      #
-      # Registers are shared across all transforms of the derivation. Transforms
-      # reading from different source collections can share state through
-      # registers, using a shuffle key that's common to both.
+      # Use a register to persist the last-arrived station for each bike.
       register:
-        # Registers are JSON documents, just like collection documents,
-        # and have an associated schema which is validated against.
         schema: ride.schema.yaml#/$defs/terminus
-        # If a particular shuffle key value has no set register, "initial" is
-        # the stand-in value which is provided to the lambda. It must validate
-        # against the register's schema.
         initial:
+          # Value to use if this is the first time seeing this bike.
           station: { id: 0, name: "" }
           timestamp: "0000-00-00 00:00:00.0"
 
       transform:
         fromRides:
-          source:
-            name: examples/citi-bike/rides
-          # Shuffle on bike ID to preserve the ending station of each bike.
+          source: { name: examples/citi-bike/rides }
           shuffle: [/bike_id]
           update:
-            # An "update" lambda updates the register of the current shuffle key.
-            # Here we retain the ending station of the current ride.
             nodeJS: return [source.end];
           publish:
-            # A "publish" lambda always runs after an "update" lambda.
-            # Along with the `source` variable, publish lambdas have
-            # automatic variables `current` and `previous` in their scope:
-            #
-            # * `previous` is the register value *before* applying the "update" lambda.
-            # * `current` is the register *after* applying "update".
-            #
-            # If there is no "update" lambda, `current` and `previous` are the same.
-            #
-            # Here, we emit a relocation event alongside the ride if one occurred.
-            # Otherwise, we emit just the ride.
+            # Compare |previous| register value from before the update lambda was applied,
+            # with the source document to determine if the bike mysteriously moved.
             nodeJS: |
               if (previous.station.id != 0 && previous.station.id != source.begin.station.id) {
                 return [

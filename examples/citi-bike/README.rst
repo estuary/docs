@@ -161,12 +161,18 @@ too full or empty. These relocations show up as "holes" in the ride data,
 where a bike mysteriously ends a ride at one station and starts its next ride at
 a different station.
 
-We can use Registers to enrich rides with explicit, interleaved "relocation" events:
+Suppose we want a collection which is enriched with explicit "relocation" events.
+To derive it, we must determine if the start of a current ride is different than
+the end of a previous ride, for each bike. But, we don't have the prior ending
+station station available in the source document.
+
+We can use *registers* to preserve a previous ending station, and compare it
+with a current starting station for each bike:
 
 .. literalinclude:: rides-and-relocations.flow.yaml
    :language: yaml
 
-We can use ``gazctl`` to observe relocation events, as they're derived:
+Use ``gazctl`` to observe relocation events, as they're derived:
 
 .. code-block:: console
 
