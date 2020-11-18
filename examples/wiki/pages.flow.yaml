@@ -3,6 +3,7 @@ import:
 
 collections:
   - name: examples/wiki/pages
+    key: [/page]
     # Inline schema which rolls up page edit statistics,
     # including a per-country breakdown:
     schema:
@@ -27,9 +28,7 @@ collections:
           type: object
           reduce: { strategy: merge }
           additionalProperties: { $ref: "#/$defs/stats" }
-
       required: [page]
-    key: [/page]
 
     # /byCountry is an object (which isn't projected by default),
     # and we'd like to materialize it to a column.

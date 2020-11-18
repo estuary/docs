@@ -8,7 +8,34 @@ We'll use to model Wikipedia page edits data, inspired by the `Druid documentati
 Captured Edits
 --------------
 
-Here's a collection spec which models a schema and captured collection for page edit data.
+Our source dataset has documents like:
+
+.. code-block:: json
+
+   {
+   "time": "2015-09-12T22:02:05.807Z",
+   "channel": "#en.wikipedia",
+   "cityName": "New York",
+   "comment": "/* Life and career */",
+   "countryIsoCode": "US",
+   "countryName": "United States",
+   "isAnonymous": true,
+   "isMinor": false,
+   "isNew": false,
+   "isRobot": false,
+   "isUnpatrolled": false,
+   "metroCode": 501,
+   "namespace": "Main",
+   "page": "Louis Gruenberg",
+   "regionIsoCode": "NY",
+   "regionName": "New York",
+   "user": "68.175.31.28",
+   "delta": 178,
+   "added": 178,
+   "deleted": 0
+   }
+
+Here's a captured collection for these page edits:
 
 .. literalinclude:: edits.flow.yaml
    :language: yaml
@@ -30,8 +57,8 @@ being bound to a pub/sub topic or S3 bucket & path:
 Page Roll-up
 ------------
 
-We can roll-up page edits to understand edit statistics for each page,
-including a by-country break down where the country is known:
+We can roll-up on page to understand edit statistics for each one,
+including a by-country break down (where the country is known):
 
 .. literalinclude:: pages.flow.yaml
    :language: yaml
