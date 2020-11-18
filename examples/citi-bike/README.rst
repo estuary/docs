@@ -19,47 +19,48 @@ documents. Let's begin with an example of a ride document that we want to schema
 .. code-block:: json
 
    {
-   "bike_id": 26396,
-   "duration_seconds": 1193,
-   "user_type": "Customer",
-   "gender": 0,
-   "birth_year": 1969,
-   "begin": {
-      "station": {
-         "geo": {
-         "latitude": 40.711863,
-         "longitude": -73.944024
+      "bike_id": 26396,
+      "duration_seconds": 1193,
+      "user_type": "Customer",
+      "gender": 0,
+      "birth_year": 1969,
+      "begin": {
+         "station": {
+            "geo": {
+            "latitude": 40.711863,
+            "longitude": -73.944024
+            },
+            "id": 3081,
+            "name": "Graham Ave & Grand St"
          },
-         "id": 3081,
-         "name": "Graham Ave & Grand St"
+         "timestamp": "2020-09-01 00:00:12.2020"
       },
-      "timestamp": "2020-09-01 00:00:12.2020"
-   },
-   "end": {
-      "station": {
-         "geo": {
-         "latitude": 40.68402,
-         "longitude": -73.94977
+      "end": {
+         "station": {
+            "geo": {
+            "latitude": 40.68402,
+            "longitude": -73.94977
+            },
+            "id": 3048,
+            "name": "Putnam Ave & Nostrand Ave"
          },
-         "id": 3048,
-         "name": "Putnam Ave & Nostrand Ave"
-      },
-      "timestamp": "2020-09-01 00:20:05.5470"
-   }
+         "timestamp": "2020-09-01 00:20:05.5470"
+      }
    }
 
-Here's a JSON Schema which models Citi Bike rides:
+Ride Schema
+-----------
 
-.. literalinclude:: ride.schema.yaml
-   :language: yaml
+We've already gone to the trouble of creating a JSON Schema which models Citi Bike
+rides, which you can find here_. We can remotely link to it from our catalog so we
+don't have to repeat ourselves. A few things about it to point out:
 
-There is a lot going on here. Let's unpack:
+.. _here: https://github.com/estuary/docs/blob/developer-docs/examples/citi-bike/ride.schema.yaml
 
 It defines the *shape* that documents can take.
-   A *ride* document must have a ``{"bike_id": ..., "begin": ..., "end": ...}``.
-   A *location* must have a ``{"latitude": ..., "longitude": ...}``, and so on.
-   The ``$ref`` keyword makes it easy to define and re-use common structures;
-   e.g., a "terminus" can represent either the beginning or end of the trip.
+   A "ride" document must have a *bike_id*, *begin*, and *end*.
+   A "location" must have a *latitude*, *longitude*, and so on.
+   The ``$ref`` keyword makes it easy to re-use common structures.
 
 *Validations* constrain the types and values that documents can take.
    A "longitude" must be a number and fall within the expected range, and "gender"
@@ -73,13 +74,9 @@ It defines the *shape* that documents can take.
    development experience.
 
 *Annotations* attach information to locations within the document.
-   Here, "title" and "description" give color to elements of the document.
+   ``title`` and ``description`` keywords give color to locations of the document.
    They're machine-accessible documentation -- which makes it possible to re-use
    these annotations in transformed versions of the schema.
-
-   Annotations are a powerful feature of JSON Schema. Flow extends the JSON Schema
-   specification with additional annotation keywords such as *reduction strategies*,
-   which detail how multiple document instances can be combined together.
 
 Capturing Rides
 ---------------
@@ -98,18 +95,21 @@ CSV files, using header names which don't match our schema:
    1097,"2020-09-01 00:00:06.8990","2020-09-01 00:18:24.2260",3492,"E 118 St & Park Ave",40.8005385,-73.9419949,3959,"Edgecombe Ave & W 145 St",40.823498,-73.94386,41438,"Subscriber",1984,1
    1473,"2020-09-01 00:00:07.7440","2020-09-01 00:24:41.1800",3946,"St Nicholas Ave & W 137 St",40.818477,-73.947568,4002,"W 144 St & Adam Clayton Powell Blvd",40.820877,-73.939249,35860,"Customer",1990,2
 
-*Projections* let us account for this, by defining a mapping between structured
-document locations (as `JSON Pointers`_) and corresponding names ("fields")
+*Projections* let us account for this, by defining a mapping between
+document locations (as `JSON Pointers`_) and corresponding fields
 in a flattened, table-based representation such as a CSV file or SQL table.
+They're used whenever Flow is capturing from or materializing into table-systems.
 
 .. _`JSON Pointers`: https://docs.opis.io/json-schema/1.x/pointers.html
+
+Putting it all together, let's define a captured "rides" collection:
 
 .. literalinclude:: rides.flow.yaml
    :language: yaml
 
-Having done this, Flow's ingestion API will automatically identify the projection
-of each CSV column from its header, and apply them to map each CSV row into a
-document:
+As this is a tutorial, we'll use Flow's ingestion API to capture directly from CSV.
+In a real-world setting, you could instead *bind* the collection to a pub/sub topic,
+S3 bucket and path, or a database table (via *change data capture*):
 
 .. code-block:: console
 
@@ -120,15 +120,6 @@ document:
    $ unzip -p 202009-citibike-tripdata.csv.zip \
       | pv --line-mode --quiet --rate-limit 500 \
       | websocat --protocol csv/v1 ws://localhost:8081/ingest/examples/citi-bike/rides
-   {"Offsets":{"examples/citi-bike/rides/pivot=00":1416},"Processed":3}
-   {"Offsets":{"examples/citi-bike/rides/pivot=00":473577},"Processed":1033}
-   {"Offsets":{"examples/citi-bike/rides/pivot=00":775687},"Processed":1692}
-
-.. note::
-
-   Flow offers a variety of ingestion APIs: gRPC, WebSockets,
-   and POSTs of JSON over HTTP. More are planned, such as Database, Kenesis,
-   and Kafka integrations.
 
 Last-Seen Station of a Bike
 ---------------------------
@@ -178,6 +169,20 @@ Use ``gazctl`` to observe relocation events, as they're derived:
 
    $ gazctl journals read --block -l estuary.dev/collection=examples/citi-bike/rides-and-relocations \
       | jq -c '. | select(.relocation)'
+
+Catalog Tests
+-------------
+
+We can uses *catalog tests* to verify the end-to-end, integrated behavior of collections.
+In fact, all of the collections in this tutorial have associated tests, but they're omitted here
+for brevity. You can find examples of `comprehensive tests`_ on GitHub.
+
+.. _`comprehensive tests`: https://github.com/estuary/docs/tree/developer-docs/examples/citi-bike
+
+Here's an example of a test for the rides & relocations derivation we just built:
+
+.. literalinclude:: rides-and-relocations.test.flow.yaml
+   :language: yaml
 
 Station Status
 --------------
