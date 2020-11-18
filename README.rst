@@ -77,11 +77,11 @@ Table of Contents
    :maxdepth: 2
    :caption: Overview
 
-   How Flow Helps <how-flow-helps>
-   Comparisons <comparisons>
+   How Flow Helps <docs/how-flow-helps>
+   Comparisons <docs/comparisons>
    Working with VS Code <docs/getting-started-vscode>
-   Concepts <concepts>
+   Concepts <docs/concepts>
    Reduction Types <reductions/README>
    Derivation Patterns <derive-patterns/README>
    Ingesting Data <docs/ingest>
-   Example: Citi Bike <citi-bike/README>
+   Example: Citi Bike <examples/citi-bike/README>

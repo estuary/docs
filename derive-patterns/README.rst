@@ -98,6 +98,12 @@ Here's a complete example of summing counts in the database, vs in registers:
 Types of Joins
 --------------
 
+.. note::
+
+   Some schema of the examples below is omitted for brevity, but can be found here_.
+
+   .. _here: https://github.com/estuary/docs/blob/developer-docs/derive-patterns/schema.yaml
+
 
 Outer Join accumulated in Database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,7 +119,6 @@ the table is required by this example:
 
 .. literalinclude:: join-outer.flow.yaml
    :language: yaml
-
 
 Inner Join accumulated in Registers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
