@@ -13,26 +13,26 @@ Our source dataset has documents like:
 .. code-block:: json
 
    {
-   "time": "2015-09-12T22:02:05.807Z",
-   "channel": "#en.wikipedia",
-   "cityName": "New York",
-   "comment": "/* Life and career */",
-   "countryIsoCode": "US",
-   "countryName": "United States",
-   "isAnonymous": true,
-   "isMinor": false,
-   "isNew": false,
-   "isRobot": false,
-   "isUnpatrolled": false,
-   "metroCode": 501,
-   "namespace": "Main",
-   "page": "Louis Gruenberg",
-   "regionIsoCode": "NY",
-   "regionName": "New York",
-   "user": "68.175.31.28",
-   "delta": 178,
-   "added": 178,
-   "deleted": 0
+      "time": "2015-09-12T22:02:05.807Z",
+      "channel": "#en.wikipedia",
+      "cityName": "New York",
+      "comment": "/* Life and career */",
+      "countryIsoCode": "US",
+      "countryName": "United States",
+      "isAnonymous": true,
+      "isMinor": false,
+      "isNew": false,
+      "isRobot": false,
+      "isUnpatrolled": false,
+      "metroCode": 501,
+      "namespace": "Main",
+      "page": "Louis Gruenberg",
+      "regionIsoCode": "NY",
+      "regionName": "New York",
+      "user": "68.175.31.28",
+      "delta": 178,
+      "added": 178,
+      "deleted": 0
    }
 
 Here's a captured collection for these page edits:
@@ -46,13 +46,11 @@ being bound to a pub/sub topic or S3 bucket & path:
 
 .. code-block:: console
 
-   # Pull down dataset.
-   $ wget https://github.com/apache/druid/raw/master/examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz
+   # Start a local development instance, and leave it running:
+   $ flowctl develop
 
-   # Streaming ingest.
-   $ gzip -cd wikiticker-2015-09-12-sampled.json.gz \
-      | pv --line-mode --quiet --rate-limit 500 \
-      | websocat --protocol json/v1 ws://localhost:8081/ingest/examples/wiki/edits
+   # In another terminal:
+   $ examples/wiki/load-pages.sh
 
 Page Roll-up
 ------------
@@ -69,7 +67,9 @@ Materialize pages to a test database:
 
     $ flowctl materialize --collection examples/wiki/pages --table-name pages --target testDB
 
-Query for popular pages. This updates as edits are captured (repeat the ingest if it's too fast):
+Query for popular pages. As page edits are captured into the source collection,
+the page roll-up derivation and it's materialization will update. You can
+repeat the ingest if it completes too quickly:
 
 .. code-block:: SQL
 

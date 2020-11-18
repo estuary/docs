@@ -107,19 +107,17 @@ Putting it all together, let's define a captured "rides" collection:
 .. literalinclude:: rides.flow.yaml
    :language: yaml
 
-As this is a tutorial, we'll use Flow's ingestion API to capture directly from CSV.
+As this is a tutorial, we'll use a Flow ingestion API to capture directly from CSV.
 In a real-world setting, you could instead *bind* the collection to a pub/sub topic,
 S3 bucket and path, or a database table (via *change data capture*):
 
 .. code-block:: console
 
-   # Start a local instance of Flow.
+   # Start a local development instance, and leave it running:
    $ flowctl develop
 
-   # Pipe CSV rows into Flow's CSV WebSocket ingestion API:
-   $ unzip -p 202009-citibike-tripdata.csv.zip \
-      | pv --line-mode --quiet --rate-limit 500 \
-      | websocat --protocol csv/v1 ws://localhost:8081/ingest/examples/citi-bike/rides
+   # In another terminal:
+   $ examples/citi-bike/load-rides.sh
 
 Last-Seen Station of a Bike
 ---------------------------
