@@ -182,20 +182,19 @@ impression ID.
 
 Typically this is done -- either explicitly, or under the hood as part of
 an execution plan -- by processing the view event first, and indexing it
-within a local state store on the impression ID. Then, should a click event
-come, it's matched against the indexed view and emitted.
+on impression ID within a local "state store", an attached mutable
+index offering very fast reads (eg, Flow uses RocksDB). Later, should a
+click event come, it's matched against the indexed view and emitted.
 
-But while local state stores are typically very fast and cheap to *read*,
-**mutating** state is perhaps the *most expensive* operation in a continuous
-data pipeline, due to the replication required under the hood. Flow goes to
-great lengths to make this efficient, but there are hard limits around
-transaction boundaries.
+The trouble is that all of that indexed state needs to live *somewhere*,
+and as its quantity increases, you need more local stores and fast
+storage to back them. Flow is no exception here.
 
-Flow lets you flip the problem on its head, by indexing current *clicks*
-and joining against *views* read with, say, a 5 minute delay.
-This is far more efficient: an order of magnitude fewer local state
-mutations, paired with cheap delayed reads to match each view
-against a potential indexed click.
+Flow *does* offer a unique "read delay" feature that lets you flip the problem
+on its head, by indexing each *click* and joining against views read with,
+say, a 10 minute delay. This can be **far** more efficient, as it re-orients
+to what local stores are great at: many very fast reads over fewer indexed
+states.
 
 
 Tyranny of Partitioning
