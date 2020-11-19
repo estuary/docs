@@ -12,24 +12,21 @@ discoverable to analysts, ML engineers, and others using their preferred
 tooling (e.g. via direct Snowflake / Spark integration).
 
 Engineers can then go on to define *operational transforms* that draw from the
-same data -- with its complete understanding of history -- to build new views
-and roll-ups, and continuously materialize them into databases, pub/sub,
-and other systems. All with end-to-end latency in the milliseconds.
+same data -- with its complete understanding of history -- to build new data
+products that continuously materialize into databases, pub/sub, and SaaS.
+All with end-to-end latency in the milliseconds.
 
-As a simple example: you can connect Flow to your pub/sub topic to a) build
-an S3 lake of user interactions, to b) derive user profiles that are stitched
-together from those interactions, and to c) continuously materialize those
-aggregated profiles into DynamoDB for live serving.
-
-Later, you might derive a customer's lifetime value from their purchase
-interactions, and materialize LTV updates right back into your pub/sub system.
-If you want to fix a mistake or index your view in a different way, that's easy:
-just define a new derivation. Flow will automatically back-fill directly from
-the S3 lake, and then seamlessly transition to live updates.
+Flow's continuous transform capability is **uniquely powerful**.
+Build complex joins and aggregations that have unlimited historical look-back,
+with no onerous windowing requirements, and which are simple to define and evolve.
+Once declared, Flow back-fills transformations directly from the S3 lake
+and then seamlessly transitions to live updates.
+New data products -- or fixes to existing ones -- are assured of consistent results, every time.
+The Flow runtime manages scaling and recovers from faults in seconds, for true "hands-free" operation.
 
 Flow is configuration driven and uses a developer-centric workflow that emphasizes
 version control, composition & re-use, rigorous schematization, and built in testing.
-It's runtime offers flexible scaling, and takes best advantage of data reductions
+It's runtime takes best advantage of data reductions
 and cloud pricing models to offer a surprisingly low total cost of ownership.
 
 This documentation lives at https://github.com/estuary/docs,
