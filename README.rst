@@ -48,7 +48,7 @@ trying out materializations.
 
 .. _Codespaces: https://github.com/features/codespaces
 .. _`VSCode Remote Containers`: https://code.visualstudio.com/docs/remote/containers
-.. _guide: docs/getting-started-vscode
+.. _guide: docs/getting-started-vscode.html
 
 .. code-block:: console
 
