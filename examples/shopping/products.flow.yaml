@@ -1,0 +1,6 @@
+collections:
+  - name: examples/shopping/products
+    schema: schema.yaml#/$defs/product
+    key: [/id]
+    projections:
+      product_num: /id

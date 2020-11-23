@@ -38,13 +38,15 @@ and is browse-able at https://estuary.readthedocs.io.
    prototyping, but there are sharp edges, open issues, and missing features.
 
 Slides (`Direct Link`_)
-========================
 
 .. raw:: html
 
     <iframe src="https://estuary.github.io/slides/intro.html" frameborder="0" width="100%" height="427" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
 
 .. _Direct Link: https://estuary.github.io/slides/intro.html
+
+.. _running-examples:
+
 
 Running Examples
 ================
@@ -66,6 +68,9 @@ trying out materializations.
 
    # Run all catalog tests.
    $ flowctl test
+
+   # Start a local Flow instance and deploy the catalog to it
+   $ flowctl develop
 
 Gazette
 =======
@@ -93,3 +98,4 @@ Table of Contents
    Example: Citi Bike <examples/citi-bike/README>
    Example: Wiki Edits <examples/wiki/README>
    Example: Network Traces <examples/net-trace/README>
+   Example: Shopping Cart <examples/shopping/README>

@@ -2,3 +2,4 @@ import:
   - citi-bike/flow.yaml
   - net-trace/flow.yaml
   - wiki/flow.yaml
+  - shopping/flow.yaml

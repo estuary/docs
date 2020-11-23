@@ -1,0 +1,91 @@
+$defs:
+  user:
+    description: "A user who may buy things from our site"
+    type: object
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      email:
+        type: string
+        format: email
+    required: [id, name, email]
+
+  updateCart:
+    type: object
+    properties:
+      userId: { type: integer }
+      productId: { type: integer }
+      quantity:
+        type: integer
+        reduce: { strategy: sum }
+    required: [userId, productId, quantity]
+    reduce: { strategy: merge }
+
+  purchaseCart:
+    type: object
+    properties:
+      userId: { type: integer }
+    required: [userId]
+
+  cart:
+    description: "Roll up of all products that users have added to a pending purchase"
+    type: object
+    properties:
+      userId: { type: integer }
+      items:
+        type: array
+        items: { $ref: "#/$defs/cartItem" }
+    required: [userId, items]
+
+  cartItem:
+    type: object
+    properties:
+      product: { $ref: "#/$defs/product" }
+      quantity: { type: integer }
+
+  cartPending:
+    $anchor: CartPending
+    type: object
+    properties:
+      state: { const: "Pending" }
+      userId: { type: integer }
+      items:
+        type: object
+        reduce:
+          strategy: set
+          key: [/product/id]
+        properties:
+          add:
+            type: array
+            items:
+              type: object
+              properties:
+                product: { $ref: "#/$defs/product" }
+                quantity:
+                  type: integer
+                  reduce: { strategy: sum }
+              required: [product]
+              reduce: { strategy: merge }
+            reduce: { strategy: lastWriteWins }
+    required: [userId, state, items]
+    reduce: { strategy: merge }
+
+  purchase:
+    description: "A confirmed order for items that were in the users cart"
+    type: object
+    properties:
+      userId: { type: integer }
+      timestamp: { type: string, format: date-time }
+      items:
+        type: array
+        items: { $ref: "#/$defs/cartItem" }
+    required: [userId, timestamp, items]
+
+  product:
+    description: "A product that is available for purchase"
+    type: object
+    properties:
+      id: { type: integer }
+      name: { type: string }
+      price: { type: number }
+    required: [id, name, price]

@@ -1,3 +1,4 @@
+.. _flow-ingester-reference:
 
 Ingesting Data
 ==============

@@ -1,0 +1,279 @@
+import:
+  - products.flow.yaml
+
+collections:
+  - name: examples/shopping/updateCarts
+    schema: schema.yaml#/$defs/updateCart
+    key: [/userId, /productId]
+
+  - name: examples/shopping/purchaseCarts
+    schema: schema.yaml#/$defs/purchaseCart
+    key: [/userId]
+
+  - name: examples/shopping/updateCartsWithProducts
+    key: [/action/userId, /product/id]
+    schema:
+      type: object
+      properties:
+        action: { $ref: schema.yaml#/$defs/updateCart }
+        product: { $ref: schema.yaml#/$defs/product }
+      required: [action, product]
+      reduce: { strategy: lastWriteWins }
+
+    derivation:
+      register:
+        initial: null
+        schema:
+          oneOf:
+            - { $ref: schema.yaml#/$defs/product }
+            - { type: "null" }
+
+      transform:
+        products:
+          source:
+            name: examples/shopping/products
+          update:
+            nodeJS: |
+              return [source]
+
+        updateCarts:
+          source:
+            name: examples/shopping/updateCarts
+          shuffle: [/productId]
+          publish:
+            nodeJS: |
+              if (register) {
+                return [{action: source, product: register!}];
+              }
+              return [];
+
+  - name: examples/shopping/carts
+    schema: schema.yaml#/$defs/cart
+    key: [/userId]
+
+    derivation:
+      register:
+        initial: { userId: 0, cartItems: {} }
+        schema:
+          type: object
+          properties:
+            userId: { type: integer }
+            cartItems:
+              type: object
+              reduce: { strategy: set, key: [/product/id] }
+              additionalProperties:
+                type: array
+                items: { $ref: schema.yaml#/$defs/cartItem }
+          required: [userId, cartItems]
+          reduce: { strategy: merge }
+
+      transform:
+        updateCartsWithProducts:
+          source:
+            name: examples/shopping/updateCartsWithProducts
+          shuffle:
+            - /action/userId
+          update:
+            nodeJS: |
+              return [{
+                userId: source.action.userId,
+                cartItems: {
+                  add: [source]
+                }
+              }]
+          publish:
+            nodeJS: |
+              return [{
+                userId: register.userId,
+                items: register.cartItems!.add!,
+              }]
+
+        clearAfterPurchase:
+          source:
+            name: examples/shopping/purchaseCarts
+          update:
+            nodeJS: |
+              return [{
+                userId: source.userId, 
+                cartItems: { intersect: [] }
+              }]
+          publish:
+            nodeJS: |
+              return [{
+                userId: source.userId,
+                items: []
+              }]
+
+  - name: examples/shopping/purchases
+    schema: schema.yaml#/$defs/purchase
+    key: [/userId, /timestamp]
+    derivation:
+      register:
+        initial: { userId: 0, items: [] }
+        schema: schema.yaml#/$defs/cart
+      transform:
+        carts:
+          source:
+            name: examples/shopping/carts
+          update:
+            nodeJS: return [source]
+
+        purchaseActions:
+          source:
+            name: examples/shopping/purchaseCarts
+
+          publish:
+            nodeJS: |
+              return [{
+                userId: register.userId,
+                timestamp: new Date().toISOString(),
+                items: register.items,
+              }]
+
+tests:
+  "cart updates have product quantities summed":
+    - ingest:
+        collection: examples/shopping/updateCarts
+        documents:
+          - userId: 1
+            productId: 2222
+            quantity: 3
+          - userId: 1
+            productId: 2222
+            quantity: 2
+          - userId: 1
+            productId: 2222
+            quantity: -1
+          - userId: 2
+            productId: 2222
+            quantity: 5
+          - userId: 2
+            productId: 3333
+            quantity: 7
+    - verify:
+        collection: examples/shopping/updateCarts
+        documents:
+          - userId: 1
+            productId: 2222
+            quantity: 4
+          - userId: 2
+            productId: 2222
+            quantity: 5
+          - userId: 2
+            productId: 3333
+            quantity: 7
+  "shopping cart is populated from updateCarts":
+    - ingest: &products
+        collection: examples/shopping/products
+        documents:
+          - { id: 333, name: "Fruit Rollup", price: 0.79 }
+          - { id: 2222, name: "Fruit By The Foot", price: 0.89 }
+          - { id: 4004, name: "Gushers", price: 2.95 }
+
+    - ingest: &cartItems
+        collection: examples/shopping/updateCarts
+        documents:
+          - userId: 1
+            productId: 2222
+            quantity: 2
+          - userId: 1
+            productId: 4004
+            quantity: 1
+          - userId: 1
+            productId: 333
+            quantity: 1
+          - userId: 1
+            productId: 2222
+            quantity: 1
+          - userId: 1
+            productId: 333
+            quantity: -1
+
+    - verify:
+        collection: examples/shopping/carts
+        documents:
+          - userId: 1
+            items:
+              - product:
+                  id: 333
+                  name: Fruit Rollup
+                  price: 0.79
+                action: { quantity: 0 }
+              - product:
+                  id: 2222
+                  name: Fruit By The Foot
+                  price: 0.89
+                action: { quantity: 3 }
+              - product:
+                  id: 4004
+                  name: Gushers
+                  price: 2.95
+                action: { quantity: 1 }
+
+  "shopping cart is purchased":
+    - ingest: *products
+    - ingest: *cartItems
+    - ingest:
+        collection: examples/shopping/purchaseCarts
+        documents:
+          - userId: 1
+
+    - verify:
+        collection: examples/shopping/purchases
+        documents:
+          - userId: 1
+            items:
+              - { product: { id: 333 }, action: { quantity: 0 } }
+              - { product: { id: 2222 }, action: { quantity: 3 } }
+              - { product: { id: 4004 }, action: { quantity: 1 } }
+    - verify:
+        collection: examples/shopping/carts
+        documents:
+          - userId: 1
+            items: []
+
+  "cart is cleared after purchase":
+    - ingest: *products
+    - ingest: *cartItems
+    - ingest:
+        collection: examples/shopping/purchaseCarts
+        documents:
+          - userId: 1
+
+    # Add and purchase one more product to assert we get a separate purchase
+    - ingest:
+        collection: examples/shopping/updateCarts
+        documents:
+          - userId: 1
+            productId: 2222
+            quantity: 50
+
+    - verify:
+        collection: examples/shopping/carts
+        documents:
+          - userId: 1
+            items:
+              - product:
+                  id: 2222
+                  name: Fruit By The Foot
+                  price: 0.89
+                action:
+                  productId: 2222
+                  quantity: 50
+
+    - ingest:
+        collection: examples/shopping/purchaseCarts
+        documents:
+          - userId: 1
+
+    - verify:
+        collection: examples/shopping/purchases
+        documents:
+          - userId: 1
+            items:
+              - { product: { id: 333 }, action: { quantity: 0 } }
+              - { product: { id: 2222 }, action: { quantity: 3 } }
+              - { product: { id: 4004 }, action: { quantity: 1 } }
+          - userId: 1
+            items:
+              - { product: { id: 2222 }, action: { quantity: 50 } }
