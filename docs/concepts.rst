@@ -8,6 +8,8 @@ Concepts
     You may want to take a look at examples first, and pick through
     topics here as more of a reference.
 
+.. _ concepts-collection:
+
 Collection
 **********
 
@@ -149,6 +151,8 @@ like SQL databases -- that can be materialized into.
 They encapsulate connection details and configuration of systems behind a
 memorable, authoritative name. See Materializations_ for more.
 
+.. _concepts-tests-section:
+
 **tests** section
 -----------------
 
@@ -228,6 +232,8 @@ inference over the schema to provide translations into other schema flavors:
   type checks of user lambda functions. These checks are immensely helpful for
   surfacing mismatched expectations around e.g. whether a field must exist,
   which otherwise usually blow up in production.
+
+.. _concepts-reductions:
 
 Reduction Annotations
 ---------------------
@@ -415,6 +421,7 @@ and Flow regularly reports back on progress as transactions commit.
 
     What's implemented today is a minimal baseline to enable early use cases.
 
+.. _concepts-derivations:
 
 Derivations
 ***********
@@ -573,6 +580,7 @@ They're a means of integrating other languages and environments into a Flow deri
 Intended uses include APIs implemented in other languages, running as "serverless"
 functions (AWS lambdas, or Google Cloud Functions).
 
+.. _concepts-registers:
 
 Registers
 ---------

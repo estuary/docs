@@ -1,3 +1,5 @@
+.. _derive-patterns:
+
 Derivation Patterns
 ===================
 

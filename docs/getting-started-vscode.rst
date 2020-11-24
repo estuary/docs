@@ -1,4 +1,4 @@
-.. _getting started vscode:
+.. _getting-started-vscode:
 
 Getting Started with VS Code
 ============================

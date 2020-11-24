@@ -1,0 +1,30 @@
+import:
+  - carts.flow.yaml
+  - cart-purchase-requests.flow.yaml
+
+collections:
+  - name: examples/shopping/purchases
+    schema: purchase.schema.yaml
+    key: [/userId, /timestamp]
+    derivation:
+      register:
+        initial: { userId: 0, items: [] }
+        schema: cart.schema.yaml
+      transform:
+        carts:
+          source:
+            name: examples/shopping/carts
+          update:
+            nodeJS: return [source]
+
+        purchaseActions:
+          source:
+            name: examples/shopping/cartPurchaseRequests
+          shuffle: [/userId]
+          publish:
+            nodeJS: |
+              return [{
+                userId: register.userId,
+                timestamp: source.timestamp,
+                items: register.items,
+              }]
