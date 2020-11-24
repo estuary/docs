@@ -37,6 +37,15 @@ and is browse-able at https://estuary.readthedocs.io.
    Flow is currently in release preview. It's ready for local development and
    prototyping, but there are sharp edges, open issues, and missing features.
 
+Slides (`Direct Link`_)
+========================
+
+.. raw:: html
+
+    <iframe src="https://estuary.github.io/slides/intro.html" frameborder="0" width="100%" height="427" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+
+.. _Direct Link: https://estuary.github.io/slides/intro.html
+
 Running Examples
 ================
 
