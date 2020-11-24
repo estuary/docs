@@ -1,7 +1,7 @@
 collections:
   - name: examples/shopping/users
     key: [/id]
-    schema: schema.yaml#/$defs/user
+    schema: user.schema.yaml
 
 tests:
   "A users email is updated":

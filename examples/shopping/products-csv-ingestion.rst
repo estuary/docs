@@ -6,9 +6,9 @@ Products CSV Ingestion
 We'll walk through how to populate our "products" Collection from a CSV file. Here's the schema
 for a product:
 
-.. literalinclude:: schema.yaml
+.. literalinclude:: product.schema.yaml
+    :caption: product.schema.yaml
     :language: yaml
-    :lines: 84-91
 
 We want to ingest a CSV with all our products from the old system. This works by sending the CSV
 over a websocket to flow-ingester, which will convert each CSV row to a JSON document and add it

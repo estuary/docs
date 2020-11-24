@@ -4,37 +4,35 @@ An Introduction to Flow
 If you're a brand new Flow user, you're in the right place! We're going to walk
 through the basics of Flow by building a shopping cart backend.
 
-Your First Collection
+Your First collection
 ~~~~~~~~~~~~~~~~~~~~~
 
-To start with, we're going to define a Flow Collection that holds data about each user. We'll
+To start with, we're going to define a Flow collection that holds data about each user. We'll
 have this collection accept user JSON documents via the REST API, and we'll materialize the data
 in a Postgres table to make it available to our marketing team. Our devcontainer comes with a
 Postgres instance that's started automatically, so all of this should "just work" in that
 environment.
 
-Flow Collections are declared in a YAML file, like so:
+Flow collections are declared in a YAML file, like so:
 
 .. literalinclude:: users.flow.yaml
     :language: yaml
     :lines: 1-4
 
-Note that the schema is defined in a separate file, ``schemas.yaml``, and includes a fragment
-that identifies a particular schema within that file. This is a common pattern because it allows
+Note that the schema is defined in a separate file. This is a common pattern because it allows
 your schemas to be reused and composed. The actual schema is defined as:
 
-.. literalinclude:: schema.yaml
-    :caption: schema.yaml
+.. literalinclude:: user.schema.yaml
+    :caption: user.schema.yaml
     :language: yaml
-    :lines: 1-11
 
-We can deploy our Collection locally by running:
+We can apply our collection to a local Flow instance by running:
 
 .. code-block:: console
 
     $ flowctl build && flowctl develop
 
-Now that it's deployed, we'll leave that terminal running and open a new one to simulate some
+Now that it's applied, we'll leave that terminal running and open a new one to simulate some
 users being added.
 
 .. literalinclude:: add-users.sh
@@ -80,7 +78,7 @@ scripts for ingesting documents and verifying expected results.
 
 .. literalinclude:: users.flow.yaml
     :language: yaml
-    :lines: 6-27
+    :lines: 6-
 
 Each test is a sequence of ``ingest`` and ``verify`` steps, which will be executed in the order
 written. In this test, we are first ingesting documents for the users Jane and Jill. The second
@@ -96,10 +94,10 @@ We can run the tests using:
 Next Steps
 ~~~~~~~~~~
 
-Now that our users Collection is working end-to-end, Here's some good topics to check out next:
+Now that our users collection is working end-to-end, Here's some good topics to check out next:
 
-* Learn the basics of CSV ingestion by building the :ref:`Products Collection <products-csv-ingestion>`
-* Explore reduction annotations by building the :ref:`Shopping Cart Collection <shopping-carts>`
+* Learn the basics of CSV ingestion by building the :ref:`Products collection <products-csv-ingestion>`
+* Explore reduction annotations by building the :ref:`Shopping Cart collection <shopping-carts>`
 
 .. toctree::
     :hidden:
