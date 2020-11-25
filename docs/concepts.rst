@@ -250,28 +250,21 @@ can be used to describe the meaning of a particular property:
         myField:
             description: "A description of myField"
 
-Flow extends JSON Schema with *reduction annotations*, which define how one
-document is to be combined into another. Here's a counter:
+Flow extends JSON Schema with :ref:`reductions <reductions-intro>` that define how one
+document is to be combined into another. Here's an integer that's summed:
 
 .. code-block:: yaml
 
-    type: object
-    reduce: {strategy: merge}
-    properties:
-        myValue:
-            type: number
-            reduce: {strategy: sum}
+    type: integer
+    reduce: { strategy: sum }
 
-    # combine({ "myValue": 1 }, { "myValue": 2 }) => { "myValue": 3 }
+    # [ 1, 2, -1 ] => 2
 
 What's especially powerful about annotations is that they respond to *conditionals*
 within the schema. A tagged union type might alter the ``description`` of a property
 depending on which variant of the union type was matched. This also applies to
-reduction annotations, which can use conditionals to compose richer behaviors.
-For example, here's a reset-able counter:
-
-.. literalinclude:: reductions/reset_counter.flow.yaml
-   :language: yaml
+reduction annotations, which can use conditionals to
+:ref:`compose richer behaviors <reductions-composition>`.
 
 Reduction annotations are a Flow super-power. They make it easy to define
 *combiners* over arbitrary JSON documents, and they allow Flow

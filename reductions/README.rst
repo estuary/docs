@@ -1,19 +1,12 @@
+
+.. _reductions-intro:
+
 Reductions
 ==========
 
 Flow implements a number of reduction strategies for use within schemas,
 which tell Flow how two instances of a document can be meaningfully
 combined together.
-
-Reduction strategies are JSON Schema annotations_, and as such their
-applicability at a given document location can be controlled through the use
-of conditional_ keywords within the schema like oneOf or if/then/else.
-This means Flow's built-in strategies below can be combined with schema
-conditionals to construct a wider variety of custom reduction behaviors,
-such as reset-able values.
-
-.. _annotations: https://json-schema.org/draft/2019-09/json-schema-core.html#rfc.section.7.7
-.. _conditional: https://json-schema.org/understanding-json-schema/reference/conditionals.html
 
 Guarantees
 ----------
@@ -173,4 +166,23 @@ sum
 ``sum`` reduces two numbers or integers by adding their values.
 
 .. literalinclude:: sum.flow.yaml
+   :language: yaml
+
+.. _reductions-composition:
+
+Composing with Conditionals
+---------------------------
+
+Reduction strategies are JSON Schema annotations_, and as such their
+applicability at a given document location can be controlled through the use
+of conditional_ keywords within the schema like ``oneOf`` or ``if/then/else``.
+This means Flow's built-in strategies below can be combined with schema
+conditionals to construct a wider variety of custom reduction behaviors.
+
+.. _annotations: https://json-schema.org/draft/2019-09/json-schema-core.html#rfc.section.7.7
+.. _conditional: https://json-schema.org/understanding-json-schema/reference/conditionals.html
+
+For example, here's a reset-able counter:
+
+.. literalinclude:: reset_counter.flow.yaml
    :language: yaml
