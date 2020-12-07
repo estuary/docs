@@ -4,5 +4,6 @@
   ],
   "editor.formatOnSave": true,
   "editor.formatOnSaveMode": "file",
-  "restructuredtext.confPath": "${workspaceFolder}"
+  "restructuredtext.confPath": "${workspaceFolder}",
+  "restructuredtext.sphinxBuildPath": "/usr/local/bin/sphinx-build"
 }

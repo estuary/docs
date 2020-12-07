@@ -1,5 +1,6 @@
 import:
   - citi-bike/flow.yaml
   - net-trace/flow.yaml
-  - wiki/flow.yaml
+  - re-key/flow.yaml
   - shopping/flow.yaml
+  - wiki/flow.yaml

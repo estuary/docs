@@ -62,6 +62,10 @@ append
 .. literalinclude:: append.flow.yaml
    :language: yaml
 
+The right-hand side *must* always be an array. The left-hand side *may* be null, in which case
+the reduction is treated as a no-op and its result remains null. This can be combined
+with schema conditionals to "toggle" whether reduction reduction should be done or not.
+
 firstWriteWins / lastWriteWins
 --------------------------------------
 
@@ -97,6 +101,9 @@ merging sorted arrays of scalars.
 
 .. literalinclude:: merge_key.flow.yaml
    :language: yaml
+
+As with ``append``, the left-hand side of ``merge`` *may* be null, in which case
+the reduction is treated as a no-op and its result remains null.
 
 minimize / maximize
 -------------------
