@@ -21,7 +21,7 @@ This is intended to be an example of how we would like to display documentation 
 <br>
 
 
-![image](/workspace/examples/docs/images/fullGraph.png)
+![image](https://github.com/estuary/docs/blob/dave_dev/examples/docs/images/fullGraph.png?raw=true)
 
 
 
