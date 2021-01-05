@@ -3,7 +3,7 @@
 This is intended to be an example of how we would like to display documentation using Estuary.  The "Endpoints" section lists technologies that are available for ingest and materialization.
 
 ---
-[**Collections**](/workspace/examples/docs/Collections.md) | [**Schema Library**](/workspace/examples/docs/schemaLibrary.md.md)
+[**Collections**](https://github.com/estuary/docs/blob/dave_dev/examples/docs/collections.md) 
 
 <br><br>
 
