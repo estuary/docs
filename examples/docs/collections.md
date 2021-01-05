@@ -3,7 +3,7 @@
 This is intended to be an example of how we would like to display documentation using Estuary.  The "Collections" section is the first thing that users would see.
 
 ---
-[**Endpoints**](/workspace/examples/docs/Endpoints.md) 
+[**Endpoints**](https://github.com/estuary/docs/blob/dave_dev/examples/docs/Endpoints.md) 
 
 <br><br>
 
