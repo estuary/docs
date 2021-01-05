@@ -6,7 +6,7 @@ This is intended to be an example of how we would like to display documentation 
 
 
 
-[**Collections**](/workspace/examples/docs/collections.md) | [**Endpoints**](/workspace/examples/docs/Endpoints.md)
+[**Collections**](https://github.com/estuary/docs/blob/dave_dev/examples/docs/collections.md) | [**Endpoints**](https://github.com/estuary/docs/blob/dave_dev/examples/docs/Endpoints.md)
 
 <br></br>
 
