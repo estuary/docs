@@ -45,8 +45,8 @@ This is intended to be an example of how we would like to display documentation 
 ## Source Collections
 
 
-* [Collection 2](link)</br>
-* [Collection 3](link)</br>
+* [Collection 2](https://github.com/estuary/docs/blob/dave_dev/examples/docs/collection.md)</br>
+* [Collection 3](https://github.com/estuary/docs/blob/dave_dev/examples/docs/collection.md)</br>
    * [Closer collections would be linked and indented](link) 
 </br>
 
