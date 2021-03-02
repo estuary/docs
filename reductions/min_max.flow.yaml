@@ -1,5 +1,5 @@
 collections:
-  - name: example/reductions/min-max
+  example/reductions/min-max:
     schema:
       type: object
       reduce: { strategy: merge }

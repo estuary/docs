@@ -2,10 +2,9 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/outer-join
+  patterns/outer-join:
     schema:
       $ref: schema.yaml#Join
-      reduce: { strategy: merge }
       required: [Key]
     key: [/Key]
 
@@ -13,17 +12,13 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          publish:
-            nodeJS: |
-              return [{Key: source.Key, LHS: source.Int}];
+          shuffle: { key: [/Key] }
+          publish: { lambda: typescript }
 
         fromStrings:
           source: { name: patterns/strings }
-          shuffle: [/Key]
-          publish:
-            nodeJS: |
-              return [{Key: source.Key, RHS: [source.String]}];
+          shuffle: { key: [/Key] }
+          publish: { lambda: typescript }
 
 tests:
   "Expect a fully reactive outer join":

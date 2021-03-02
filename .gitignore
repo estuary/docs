@@ -1,4 +1,8 @@
-catalog-nodejs
-catalog.db
-_build
-Session.vim
+# Outputs from catalog build and test that we don't version.
+/_build
+/catalog.db
+/dist
+/docs/_build
+/exmaples/examples.db*
+/flowctl-develop
+/node_modules

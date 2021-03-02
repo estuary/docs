@@ -2,11 +2,11 @@ import:
   - rides-and-relocations.flow.yaml
 
 collections:
-  - name: examples/citi-bike/stations
+  examples/citi-bike/stations:
     key: [/id]
     schema: station.schema.yaml
     projections:
-      stable: /stable/add
+      currentBikes: /stable/add
 
     derivation:
       transform:
@@ -14,31 +14,12 @@ collections:
           source:
             name: examples/citi-bike/rides-and-relocations
           publish:
-            nodeJS: |
-              if (source.relocation) {
-                return [
-                  {
-                    departure: { move: 1 },
-                    stable: { remove: [source.bike_id] },
-                    ...source.begin.station,
-                  },
-                  {
-                    arrival: { move: 1 },
-                    stable: { add: [source.bike_id] },
-                    ...source.end.station,
-                  },
-                ];
-              } else {
-                return [
-                  {
-                    departure: { ride: 1 },
-                    stable: { remove: [source.bike_id] },
-                    ...source.begin.station,
-                  },
-                  {
-                    arrival: { ride: 1 },
-                    stable: { add: [source.bike_id] },
-                    ...source.end.station,
-                  },
-                ];
-              }
+            lambda: typescript
+
+materializations:
+  examples/citi-bike/stations/intoExamples:
+    endpoint:
+      name: examples
+      config: { table: stations }
+    source:
+      name: examples/citi-bike/stations

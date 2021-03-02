@@ -227,3 +227,23 @@ partitioning, and downstream transformations are then rebuilt.
 Flow **completely** avoids these issues. Collection partitions and derivation
 tasks are decoupled from one another, and can be scaled independently as needed
 and without downtime. In the future, scaling will be fully automated.
+
+
+
+
+This design has _severe_ downsides:
+
+-   Total parallelism is constrained to the number of input partitions,
+    since tasks and partitions must be 1:1.
+-   Per-task state stores _must_ accommodate all indexed keys of their input partition,
+    even if that leads the state store to become impracticably large.
+-   Load is only balanced if input keys are independent and identically distributed.
+    This is almost _never_ the case; real-world problems exhibit "write skew" and hot keys.
+-   Partitioning _cannot be changed_ without invalidating the presumption that all
+    instances of a key will locate within a single partition.
+-   The recourse for an under-provisioned use case is to rebuild its input topic / collection
+    under a new, expanded partitioning. This duplicates storage and processing, and involves
+    downtime or painful multi-step migrations, especially if the use case is itself an input
+    to other downstream pipelines!
+-   This is so painful that operators typically significantly over-provision to avoid it,
+    which adds its own overheads and yet still carries risks of being wrong.

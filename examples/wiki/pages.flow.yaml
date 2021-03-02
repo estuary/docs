@@ -2,7 +2,7 @@ import:
   - edits.flow.yaml
 
 collections:
-  - name: examples/wiki/pages
+  examples/wiki/pages:
     key: [/page]
     # Inline schema which rolls up page edit statistics,
     # including a per-country breakdown:
@@ -38,18 +38,5 @@ collections:
     derivation:
       transform:
         rollUpEdits:
-          source:
-            name: examples/wiki/edits
-          publish:
-            nodeJS: |
-              let stats = {cnt: 1, add: source.added, del: source.deleted};
-
-              if (source.countryIsoCode) {
-                return [{
-                    page: source.page,
-                    byCountry: {[source.countryIsoCode]: stats},
-                    ...stats,
-                }];
-              }
-              // Unknown country.
-              return [{page: source.page, ...stats}];
+          source: { name: examples/wiki/edits }
+          publish: { lambda: typescript }

@@ -1,5 +1,5 @@
 collections:
-  - name: example/reductions/fww-lww
+  example/reductions/fww-lww:
     schema:
       type: object
       reduce: { strategy: merge }

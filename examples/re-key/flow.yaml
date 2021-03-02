@@ -10,18 +10,18 @@
 
 collections:
   # A collection of some interesting events, having (only) anonymous IDs.
-  - name: examples/re-key/anonymous_events
+  examples/re-key/anonymous_events:
     schema: schema.yaml#/$defs/anonymous_event
     key: [/event_id]
 
   # Learned mappings of anonymous ID <=> stable ID,
   # e.x. from a login or registration workflow.
-  - name: examples/re-key/mappings
+  examples/re-key/mappings:
     schema: schema.yaml#/$defs/id_mapping
     key: [/anonymous_id, /stable_id]
 
   # Derivation of interesting events, now enriched with stable IDs.
-  - name: examples/re-key/stable_events
+  examples/re-key/stable_events:
     schema: schema.yaml#/$defs/stable_event
     key: [/event_id]
 
@@ -33,40 +33,16 @@ collections:
       transform:
         fromAnonymousEvents:
           source: { name: examples/re-key/anonymous_events }
-          shuffle: [/anonymous_id]
-          update:
-            # Reduce this event into |register.events|. If stable_id is already known,
-            # then register.events is null and this is a no-op.
-            nodeJS: |
-              return [{events: [source]}];
-          publish:
-            # If the stable ID for this event is known, enrich the source event and publish.
-            # Otherwise, we've updated this source event into |register.events| and will
-            # publish once its stable ID becomes known.
-            nodeJS: |
-              if (register.stable_id) {
-                return [{ stable_id: register.stable_id, ...source }];
-              }
-              return [];
+          shuffle: { key: [/anonymous_id] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
         fromIdMappings:
           source: { name: examples/re-key/mappings }
-          shuffle: [/anonymous_id]
-          update:
-            # Update the register with the associated stable ID of this anonymous ID.
-            # Set events to null, so that future "append" reductions are no-ops.
-            nodeJS: |
-              return [{ events: null, stable_id: source.stable_id }];
-          publish:
-            # Publish previous register.events, enriched with the just-learned stable ID.
-            nodeJS: |
-              let out = [];
-              if (register.stable_id && previous.events) {
-                for (var event of previous.events) {
-                  out.push({ stable_id: register.stable_id, ...event });
-                }
-              }
-              return out;
+          shuffle:
+            key: [/anonymous_id]
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
 tests:
   "Expect we join anonymous events through stable ID mappings":

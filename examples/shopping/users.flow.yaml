@@ -1,5 +1,5 @@
 collections:
-  - name: examples/shopping/users
+  examples/shopping/users:
     key: [/id]
     schema: user.schema.yaml
 

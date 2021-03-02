@@ -3,7 +3,7 @@ import:
   - cart-purchase-requests.flow.yaml
 
 collections:
-  - name: examples/shopping/carts
+  examples/shopping/carts:
     schema: cart.schema.yaml
     key: [/userId]
     derivation:
@@ -26,41 +26,15 @@ collections:
         cartUpdatesWithProducts:
           source:
             name: examples/shopping/cartUpdatesWithProducts
-          shuffle:
-            - /action/userId
-          update:
-            nodeJS: |
-              return [{
-                userId: source.action.userId,
-                cartItems: {
-                  add: [source]
-                }
-              }]
-          publish:
-            nodeJS: |
-              return [{
-                userId: register.userId,
-                items: register.cartItems!.add!,
-              }]
+          shuffle: { key: [/action/userId] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
         clearAfterPurchase:
           source:
             name: examples/shopping/cartPurchaseRequests
           # Shuffle on userId only, since the timestamp should not be used when determining which
           # register value to associate with each document.
-          shuffle: [/userId]
-          update:
-            nodeJS: |
-              return [{
-                userId: source.userId,
-                // The intersect property is handled by the "set" reduction strategy. Intersecting
-                // with an empty array clears the set.
-                cartItems: { intersect: [] }
-              }]
-          publish:
-            nodeJS: |
-              return [{
-                userId: source.userId,
-                items: []
-              }]
-
+          shuffle: { key: [/userId] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }

@@ -3,7 +3,7 @@ import:
   - cart-purchase-requests.flow.yaml
 
 collections:
-  - name: examples/shopping/purchases
+  examples/shopping/purchases:
     schema: purchase.schema.yaml
     key: [/userId, /timestamp]
     derivation:
@@ -14,17 +14,10 @@ collections:
         carts:
           source:
             name: examples/shopping/carts
-          update:
-            nodeJS: return [source]
+          update: { lambda: typescript }
 
         purchaseActions:
           source:
             name: examples/shopping/cartPurchaseRequests
-          shuffle: [/userId]
-          publish:
-            nodeJS: |
-              return [{
-                userId: register.userId,
-                timestamp: source.timestamp,
-                items: register.items,
-              }]
+          shuffle: { key: [/userId] }
+          publish: { lambda: typescript }

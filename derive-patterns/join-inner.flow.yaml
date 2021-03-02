@@ -2,7 +2,7 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/inner-join
+  patterns/inner-join:
     schema:
       $ref: schema.yaml#Join
       reduce: { strategy: lastWriteWins }
@@ -11,34 +11,21 @@ collections:
 
     derivation:
       register:
-        schema:
-          $ref: schema.yaml#Join
-          reduce: { strategy: merge }
+        schema: schema.yaml#Join
         initial: {}
 
       transform:
         fromInts:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          update:
-            nodeJS: |
-              return [{LHS: source.Int}];
-          publish:
-            nodeJS: &innerJoinLambda |
-              // Inner join requires that both sides be matched.
-              if (register.LHS && register.RHS) {
-                return [{Key: source.Key, ...register}]
-              }
-              return [];
+          shuffle: { key: [/Key] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
         fromStrings:
           source: { name: patterns/strings }
-          shuffle: [/Key]
-          update:
-            nodeJS: |
-              return [{RHS: [source.String]}];
-          publish:
-            nodeJS: *innerJoinLambda
+          shuffle: { key: [/Key] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
 tests:
   "Expect a fully reactive inner-join":

@@ -2,7 +2,7 @@ import:
   - rides.flow.yaml
 
 collections:
-  - name: examples/citi-bike/last-seen
+  examples/citi-bike/last-seen:
     key: [/bike_id]
     schema:
       type: object
@@ -16,5 +16,12 @@ collections:
         locationFromRide:
           source: { name: examples/citi-bike/rides }
           publish:
-            nodeJS: |
-              return [{ bike_id: source.bike_id, last: source.end }];
+            lambda: typescript
+
+materializations:
+  examples/citi-bike/last-seen/intoExamples:
+    endpoint:
+      name: examples
+      config: { table: last_seen }
+    source:
+      name: examples/citi-bike/last-seen

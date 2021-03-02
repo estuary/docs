@@ -1,5 +1,5 @@
 collections:
-  - name: examples/shopping/products
+  examples/shopping/products:
     schema: product.schema.yaml
     key: [/id]
     projections:

@@ -3,7 +3,7 @@ import:
   - cart-updates.flow.yaml
 
 collections:
-  - name: examples/shopping/cartUpdatesWithProducts
+  examples/shopping/cartUpdatesWithProducts:
     key: [/action/userId, /product/id]
     schema:
       type: object
@@ -25,9 +25,7 @@ collections:
         products:
           source:
             name: examples/shopping/products
-          update:
-            nodeJS: |
-              return [source]
+          update: { lambda: typescript }
 
         cartUpdates:
           source:
@@ -35,15 +33,5 @@ collections:
           # Setting the shuffle key to "[/productId]" means that for each cartUpdate document from
           # the source, Flow will use the value of the productId field to look up its associated
           # register value.
-          shuffle: [/productId]
-          publish:
-            nodeJS: |
-              // The register schema says this might be null, so we need to deal with that here.
-              // If we haven't seen a product with this id, then we simply don't publish. This makes
-              // it an inner join.
-              if (register) {
-                // The ! in register! is a typescript non-null assertion. It's required since
-                // the register schema says it may be null, and safe here because we checked.
-                return [{action: source, product: register!}];
-              }
-              return [];
+          shuffle: { key: [/productId] }
+          publish: { lambda: typescript }

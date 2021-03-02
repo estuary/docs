@@ -1,0 +1,28 @@
+{
+  "files": [
+    "../derive-patterns/join-inner.flow.ts",
+    "../derive-patterns/join-one-sided.flow.ts",
+    "../derive-patterns/join-outer.flow.ts",
+    "../derive-patterns/summer.flow.ts",
+    "../derive-patterns/zero-crossing.flow.ts",
+    "../examples/citi-bike/idle-bikes.flow.ts",
+    "../examples/citi-bike/last-seen.flow.ts",
+    "../examples/citi-bike/rides-and-relocations.flow.ts",
+    "../examples/citi-bike/stations.flow.ts",
+    "../examples/net-trace/services.flow.ts",
+    "../examples/re-key/flow.ts",
+    "../examples/shopping/cart-updates-with-products.flow.ts",
+    "../examples/shopping/carts.flow.ts",
+    "../examples/shopping/purchases.flow.ts",
+    "../examples/wiki/pages.flow.ts",
+    "../flow_generated/flow/anchors.d.ts",
+    "../flow_generated/flow/collections.d.ts",
+    "../flow_generated/flow/interfaces.d.ts",
+    "../flow_generated/flow/main.ts",
+    "../flow_generated/flow/modules.d.ts",
+    "../flow_generated/flow/registers.d.ts",
+    "../flow_generated/flow/routes.ts",
+    "../flow_generated/flow/server.ts",
+    "../flow_generated/flow/transforms.d.ts"
+  ]
+}

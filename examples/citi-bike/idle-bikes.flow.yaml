@@ -6,7 +6,7 @@ collections:
   # * One reads in real-time, and stores the ride timestamp in a register.
   # * Two reads with a delay, and checks whether the last
   #   ride timestamp hasn't updated since this (delayed) ride.
-  - name: examples/citi-bike/idle-bikes
+  examples/citi-bike/idle-bikes:
     schema:
       type: object
       properties:
@@ -27,22 +27,15 @@ collections:
         liveRides:
           source:
             name: examples/citi-bike/rides
-          shuffle: [/bike_id]
-          update:
-            nodeJS: return [source.end.timestamp];
+          shuffle: { key: [/bike_id] }
+          update: { lambda: typescript }
 
         delayedRides:
           source:
             name: examples/citi-bike/rides
-          shuffle: [/bike_id]
+          shuffle: { key:  [/bike_id] }
           # Use a 2-day read delay, relative to the document's ingestion.
           # To see read delays in action within a short-lived
           # testing contexts, try using a smaller value (e.g., 2m).
           readDelay: "48h"
-          publish:
-            nodeJS: |
-              // Publish if the bike hasn't moved in 2 days.
-              if (register === source.end.timestamp) {
-                return [{ bike_id: source.bike_id, station: source.end }];
-              }
-              return [];
+          publish: { lambda: typescript }

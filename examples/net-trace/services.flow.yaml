@@ -1,12 +1,11 @@
 import:
   - pairs.flow.yaml
 
-# Package lambdas with an NPM dependency on Moment.js.
-nodeDependencies:
+npmDependencies:
   moment: "^2.24"
 
 collections:
-  - name: examples/net-trace/services
+  examples/net-trace/services:
     key: [/date, /service/ip, /service/port]
     schema:
       type: object
@@ -22,25 +21,12 @@ collections:
         fromPairs:
           source: { name: examples/net-trace/pairs }
           publish:
-            nodeJS: |
-              // Use moment.js to deal with oddball timestamp format, and truncate to current date.
-              let date = moment(source.timestamp, "DD/MM/YYYYhh:mm:ss").format('YYYY-MM-DD')
-              let out = [];
+            lambda: typescript
 
-              if (source.src.port < 1024) {
-                source.src.ip = source.src.ip.split('.').slice(0, -1).join('.');
-                out.push({
-                    date: date,
-                    service: source.src,
-                    stats: source.fwd,
-                });
-              }
-              if (source.dst.port < 1024) {
-                source.dst.ip = source.dst.ip.split('.').slice(0, -1).join('.');
-                out.push({
-                    date: date,
-                    service: source.dst,
-                    stats: source.bwd,
-                });
-              }
-              return out;
+materializations:
+  examples/net-trace/services/intoExamples:
+    endpoint:
+      name: examples
+      config: { table: net_services }
+    source:
+      name: examples/net-trace/services

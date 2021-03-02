@@ -4,3 +4,10 @@ import:
   - re-key/flow.yaml
   - shopping/flow.yaml
   - wiki/flow.yaml
+
+endpoints:
+  examples:
+    sqlite:
+      # Use WAL mode so that Flow-external reads (e.x. from `sqlite3`)
+      # don't fail with "database is locked" errors.
+      path: examples.db?_journal=WAL

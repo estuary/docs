@@ -2,7 +2,7 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/sums-db
+  patterns/sums-db:
     schema: &schema
       type: object
       properties:
@@ -18,12 +18,10 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          publish:
-            nodeJS: |
-              return [{Key: source.Key, Sum: source.Int}];
+          shuffle: { key: [/Key] }
+          publish: { lambda: typescript }
 
-  - name: patterns/sums-register
+  patterns/sums-register:
     schema:
       # Re-use the schema defined above.
       <<: *schema
@@ -40,13 +38,9 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          update:
-            nodeJS: |
-              return [source.Int];
-          publish:
-            nodeJS: |
-              return [{Key: source.Key, Sum: register}];
+          shuffle: { key: [/Key] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
 tests:
   "Expect we can do sums during materialization or within registers":

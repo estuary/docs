@@ -2,7 +2,7 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/one-sided-join
+  patterns/one-sided-join:
     schema:
       $ref: schema.yaml#Join
       reduce: { strategy: lastWriteWins }
@@ -11,25 +11,19 @@ collections:
 
     derivation:
       register:
-        schema:
-          $ref: schema.yaml#Join
-          reduce: { strategy: merge }
+        schema: schema.yaml#Join
         initial: { RHS: [] }
 
       transform:
         publishLHS:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          publish:
-            nodeJS: |
-              return [{Key: source.Key, LHS: source.Int, RHS: register.RHS}]
+          shuffle: { key: [/Key] }
+          publish: { lambda: typescript }
 
         updateRHS:
           source: { name: patterns/strings }
-          shuffle: [/Key]
-          update:
-            nodeJS: |
-              return [{RHS: [source.String]}];
+          shuffle: { key: [/Key] }
+          update: { lambda: typescript }
 
 tests:
   "Expect a left join of the current LHS with the accumulated RHS":

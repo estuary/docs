@@ -5,5 +5,20 @@
   "editor.formatOnSave": true,
   "editor.formatOnSaveMode": "file",
   "restructuredtext.confPath": "${workspaceFolder}",
-  "restructuredtext.sphinxBuildPath": "/usr/local/bin/sphinx-build"
+  "restructuredtext.sphinxBuildPath": "/usr/local/bin/sphinx-build",
+
+		"yaml.schemas": {
+			"https://json-schema.org/draft/2019-09/schema": [
+				"schema.yml",
+				"schema.yaml",
+				"*.schema.yml",
+				"*.schema.yaml"
+			],
+			"/usr/local/etc/flow.schema.json": [
+				"flow.yml",
+				"flow.yaml",
+				"*.flow.yml",
+				"*.flow.yaml"
+			]
+		},
 }

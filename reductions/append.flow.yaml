@@ -1,5 +1,5 @@
 collections:
-  - name: example/reductions/append
+  example/reductions/append:
     schema:
       type: object
       reduce: { strategy: merge }

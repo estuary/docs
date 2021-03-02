@@ -1,5 +1,5 @@
 collections:
-  - name: examples/net-trace/pairs
+  examples/net-trace/pairs:
     key: [/src/ip, /src/port, /dst/ip, /dst/port]
     schema:
       $ref: schema.yaml

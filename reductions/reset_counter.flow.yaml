@@ -1,5 +1,5 @@
 collections:
-  - name: example/reductions/sum-reset
+  example/reductions/sum-reset:
     schema:
       type: object
       properties:

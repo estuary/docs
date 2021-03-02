@@ -1,5 +1,5 @@
 collections:
-  - name: examples/citi-bike/rides
+  examples/citi-bike/rides:
     key: [/bike_id, /begin/timestamp]
     schema: https://raw.githubusercontent.com/estuary/docs/developer-docs/examples/citi-bike/ride.schema.yaml
     # Define projections for each CSV header name used in the source dataset.
@@ -19,3 +19,8 @@ collections:
       stoptime: /end/timestamp
       tripduration: /duration_seconds
       usertype: /user_type
+
+captures:
+  examples/citi-bike/rides/viaAPI:
+    target: { name: examples/citi-bike/rides }
+    pushAPI: {}

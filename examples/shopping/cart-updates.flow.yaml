@@ -1,4 +1,4 @@
 collections:
-  - name: examples/shopping/cartUpdates
+  examples/shopping/cartUpdates:
     schema: cart-update.schema.yaml
     key: [/userId, /productId]

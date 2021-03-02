@@ -1,5 +1,5 @@
 collections:
-  - name: examples/wiki/edits
+  examples/wiki/edits:
     key: [/time, /page]
     # Inline schema which partially describes the edit dataset:
     schema:

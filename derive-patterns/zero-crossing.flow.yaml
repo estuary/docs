@@ -2,7 +2,7 @@ import:
   - inputs.flow.yaml
 
 collections:
-  - name: patterns/zero-crossing
+  patterns/zero-crossing:
     schema: schema.yaml#Int
     key: [/Key]
 
@@ -16,15 +16,9 @@ collections:
       transform:
         fromInts:
           source: { name: patterns/ints }
-          shuffle: [/Key]
-          update:
-            nodeJS: return [source.Int];
-          publish:
-            nodeJS: |
-              if (register > 0 != previous > 0) {
-                return [source];
-              }
-              return [];
+          shuffle: { key: [/Key] }
+          update: { lambda: typescript }
+          publish: { lambda: typescript }
 
 tests:
   "Expect we can filter to zero-crossing documents":

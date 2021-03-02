@@ -1,5 +1,5 @@
 collections:
-  - name: example/reductions/set-array
+  example/reductions/set-array:
     schema:
       type: object
       reduce: { strategy: merge }
@@ -32,8 +32,8 @@ collections:
     key: [/key]
 
 tests:
-  ? "Expect we can apply operations of sorted-array sets to incrementally build associative maps"
-  : - ingest:
+  "Expect we can apply operations of sorted-array sets to incrementally build associative maps":
+    - ingest:
         collection: example/reductions/set-array
         documents:
           - { key: "key", value: { "add": [["a", 1], ["b", 1], ["c", 1]] } }

@@ -2,7 +2,7 @@ import:
   - rides.flow.yaml
 
 collections:
-  - name: examples/citi-bike/rides-and-relocations
+  examples/citi-bike/rides-and-relocations:
     key: [/bike_id, /begin/timestamp]
     schema:
       # Relocations are rides marked by a "relocation: true" property.
@@ -22,17 +22,8 @@ collections:
       transform:
         fromRides:
           source: { name: examples/citi-bike/rides }
-          shuffle: [/bike_id]
+          shuffle: { key: [/bike_id] }
           update:
-            nodeJS: return [source.end];
+            lambda: typescript
           publish:
-            # Compare |previous| register value from before the update lambda was applied,
-            # with the source document to determine if the bike mysteriously moved.
-            nodeJS: |
-              if (previous.station.id != 0 && previous.station.id != source.begin.station.id) {
-                return [
-                  { bike_id: source.bike_id, begin: previous, end: source.begin, relocation: true },
-                  source,
-                ];
-              }
-              return [source];
+            lambda: typescript
