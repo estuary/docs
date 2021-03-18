@@ -17,9 +17,8 @@ collections:
             lambda: typescript
 
 materializations:
-  examples/citi-bike/stations/intoExamples:
+  - source:
+      name: examples/citi-bike/stations
     endpoint:
       name: examples
       config: { table: stations }
-    source:
-      name: examples/citi-bike/stations

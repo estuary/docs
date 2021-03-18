@@ -19,8 +19,3 @@ collections:
       stoptime: /end/timestamp
       tripduration: /duration_seconds
       usertype: /user_type
-
-captures:
-  examples/citi-bike/rides/viaAPI:
-    target: { name: examples/citi-bike/rides }
-    pushAPI: {}

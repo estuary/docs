@@ -24,9 +24,8 @@ collections:
             lambda: typescript
 
 materializations:
-  examples/net-trace/services/intoExamples:
+  - source:
+      name: examples/net-trace/services
     endpoint:
       name: examples
       config: { table: net_services }
-    source:
-      name: examples/net-trace/services

@@ -19,9 +19,8 @@ collections:
             lambda: typescript
 
 materializations:
-  examples/citi-bike/last-seen/intoExamples:
+  - source:
+      name: examples/citi-bike/last-seen
     endpoint:
       name: examples
       config: { table: last_seen }
-    source:
-      name: examples/citi-bike/last-seen
