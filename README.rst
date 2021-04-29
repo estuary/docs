@@ -1,5 +1,12 @@
-Estuary Flow (Preview)
-======================
+
+.. warning::
+
+   This documentation is deprecated. The new documentation is available at 
+   `docs.estaury.dev <https://docs.estuary.dev/>`_. This repo is archived for reference, 
+   but may soon be deleted to avoid confusion.
+
+Estuary Flow Deprecated Documentation
+=====================================
 
 Estuary Flow unifies technologies and teams around a shared understanding of
 an organization's data, that updates continuously as new data records come in.
